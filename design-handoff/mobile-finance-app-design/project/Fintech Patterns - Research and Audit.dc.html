@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body { margin:0; background:#F3EDE6; }
+a { color:#B8452A; text-decoration:none; border-bottom:1px solid rgba(184,69,42,0.3); }
+a:hover { color:#8E3320; }
+</style>
+</helmet>
+<div style="background:#F3EDE6;min-height:100vh;padding:56px 24px 96px;font-family:Archivo,system-ui,sans-serif;color:#1A1410">
+<div style="max-width:760px;margin:0 auto">
+
+<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8A7568">Research · September 2026</div>
+<h1 style="font-size:42px;line-height:1.08;font-weight:600;letter-spacing:-1.2px;margin:14px 0 0;text-wrap:pretty">What good fintech apps do, and where Ledger stands</h1>
+<p style="font-size:17px;line-height:1.6;color:#5C4C43;margin:18px 0 0;max-width:62ch;text-wrap:pretty">Nine patterns that recur across current fintech and budgeting UX writing, each checked against the Ledger v2 prototype. Sources are listed at the end.</p>
+
+<div style="display:flex;gap:10px;margin:34px 0 0;flex-wrap:wrap">
+<div style="background:#FFFFFF;border:1px solid #E0D5C9;border-radius:12px;padding:12px 16px"><div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8A7568">In place</div><div style="font-size:24px;font-weight:600;margin-top:2px">5</div></div>
+<div style="background:#FFFFFF;border:1px solid #E0D5C9;border-radius:12px;padding:12px 16px"><div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8A7568">Partial</div><div style="font-size:24px;font-weight:600;margin-top:2px">2</div></div>
+<div style="background:#FFFFFF;border:1px solid #E0D5C9;border-radius:12px;padding:12px 16px"><div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8A7568">Missing</div><div style="font-size:24px;font-weight:600;margin-top:2px">2</div></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px;margin-top:38px">
+<sc-for list="{{ patterns }}" as="p" hint-placeholder-count="9">
+<div style="background:#FFFFFF;border:1px solid #E0D5C9;border-radius:18px;padding:22px 24px">
+<div style="display:flex;align-items:flex-start;gap:14px">
+<div style="font-size:12px;font-weight:600;color:#B0A196;font-variant-numeric:tabular-nums;padding-top:4px">{{ p.num }}</div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<div style="font-size:19px;font-weight:600;letter-spacing:-0.3px">{{ p.title }}</div>
+<div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:20px;background:{{ p.badgeBg }};color:{{ p.badgeFg }}">{{ p.status }}</div>
+</div>
+<p style="font-size:15px;line-height:1.6;color:#4A3C34;margin:10px 0 0;text-wrap:pretty">{{ p.body }}</p>
+<div style="display:flex;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #EFE7DE">
+<div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#8A7568;min-width:70px;padding-top:2px">Ledger</div>
+<div style="flex:1;font-size:14px;line-height:1.55;color:#1A1410">{{ p.verdict }}</div>
+</div>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+
+<h2 style="font-size:28px;font-weight:600;letter-spacing:-0.6px;margin:52px 0 0">What I would change, in order</h2>
+<div style="display:flex;flex-direction:column;margin-top:18px">
+<sc-for list="{{ changes }}" as="c" hint-placeholder-count="6">
+<div style="display:flex;gap:18px;padding:18px 0;border-bottom:1px solid #E0D5C9">
+<div style="font-size:13px;font-weight:600;color:#B8452A;min-width:22px;font-variant-numeric:tabular-nums">{{ c.num }}</div>
+<div style="flex:1">
+<div style="font-size:16px;font-weight:600">{{ c.title }}</div>
+<div style="font-size:14px;line-height:1.6;color:#5C4C43;margin-top:5px;text-wrap:pretty">{{ c.body }}</div>
+</div>
+<div style="font-size:12px;color:#8A7568;white-space:nowrap;padding-top:3px">{{ c.effort }}</div>
+</div>
+</sc-for>
+</div>
+
+<h2 style="font-size:20px;font-weight:600;letter-spacing:-0.3px;margin:48px 0 0">Sources</h2>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+<sc-for list="{{ sources }}" as="s" hint-placeholder-count="6">
+<div style="font-size:14px;line-height:1.5;color:#5C4C43"><a href="{{ s.url }}" target="_blank">{{ s.name }}</a> <span style="color:#8A7568">· {{ s.note }}</span></div>
+</sc-for>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const P = [
+  ['Show value before you ask for anything', 'in place',
+   'The old sequence was sign up, verify identity, link a bank, wait for approval, and only then see something useful. Every step sheds people, and fintech loses users at high rates during setup. The current approach inverts it: let someone browse, simulate, or configure something meaningful first, and verify later.',
+   'The welcome screen offers "Explore with sample data", which drops straight into a populated app with no account linking. Account selection is a single optional step.'],
+  ['One dominant next action per screen', 'partial',
+   'Mobile fintech is moving away from a static grid of equal-weight tiles toward a prioritized single column: one dominant next action, with secondary options receding.',
+   'Home leads with total balance, but balance is a number, not an action. The clearest next action on Home is the floating + button, which sits in the corner rather than in the flow.'],
+  ['Progress bars and rings over tables of numbers', 'in place',
+   'Clear visualizations let someone spot a trend in about a second instead of reading for one. Bars and rings that fill as spending approaches a limit give an at-a-glance read without parsing numbers.',
+   'Every budget, goal and the month summary uses a fill bar with a colour that shifts from green to amber to coral as the limit approaches.'],
+  ['Guided empty states, not blank dashboards', 'in place',
+   'A blank dashboard after signup looks broken. A guided empty state shows what will go there, explains the first task, and makes the product feel alive before real data arrives.',
+   'First run shows a bordered card explaining that budgets fill in once the first expense is added, with the add action and a sample-data escape hatch.'],
+  ['Correct a category once, and have it stick', 'missing',
+   'Categorization is where budgeting apps earn or lose daily trust. Stronger products let you fix a wrong category once and turn that fix into a rule, so the same merchant lands in the same place next time.',
+   'Recategorize changes the single transaction only. No rule, no "always categorize Loblaws as Groceries" follow-up.'],
+  ['Frame a shortfall as a gap to close', 'in place',
+   'Money is tied to emotion, and finance design either motivates or produces guilt. The practical version is narrow: frame a shortfall as a gap the user can close rather than a failure already committed, and show the consequence of an action before it happens.',
+   'Budget rows read "$160 left · 22 days" rather than "80% over". The debt card states a date and a monthly figure instead of a balance alone.'],
+  ['Restraint with alerts', 'partial',
+   'Too many warnings make a finance app feel noisy. Useful alerts narrow to payment risk, budget overspend, unusual transaction size, low balance, and recurring bill changes.',
+   'Settings names one alert rule, at 80% of a budget, but nothing in the prototype ever surfaces an alert, so the pattern is stated rather than shown.'],
+  ['Light and dark are both baseline', 'in place',
+   'Supporting both light and dark modes is no longer a differentiator in 2026. The stronger palettes are deliberate: neutral foundations, high-contrast data, accent colours used with precision.',
+   'Both themes ship, including the device status bar. Coral is reserved for the active state, the primary action, and over-budget; it is never decorative.'],
+  ['Deliberate friction on consequential actions', 'missing',
+   'Financial actions can be difficult or impossible to reverse, so friction should be applied deliberately where the stakes justify it, and removed everywhere else.',
+   'Save on a new expense commits with one tap and no confirmation or undo. Fine for a $9 coffee, thin for a $1,450 rent entry.'],
+];
+const C = [
+  ['Add a category rule after recategorizing', 'After changing a category, offer "Always categorize Loblaws as Groceries". One extra tap, and it is the single change most likely to keep the budget data honest over months.', 'Small'],
+  ['Give Home one clear next action', 'Replace the floating + with a full-width action in the flow, labelled with what it does, and let the corner stay clear. Keeps the single-column priority the pattern calls for.', 'Small'],
+  ['Make an alert real', 'When a category crosses 80%, show a dismissible line at the top of Home naming the category and the amount left. One alert type, shown once.', 'Small'],
+  ['Undo instead of a confirm dialog', 'After saving an expense, show a brief "Added $142.30 to Groceries · Undo" line. Friction where it helps, without a modal.', 'Medium'],
+  ['Tap a spending category to filter Activity', 'The insights breakdown and budget rows should both act as filters into Activity. Costs nothing structurally and removes a navigation step.', 'Medium'],
+  ['Split a transaction across two categories', 'Split when the purchase affects two different decisions, groceries and clothing in one big-box trip. The household case makes this more common, not less.', 'Larger'],
+];
+const S = [
+  ['WANDR — Fintech Mobile App Design Trends 2026', 'https://www.wandr.studio/blog/fintech-mobile-app-design-trends', 'onboarding sequence, single-column priority'],
+  ['Appthetics — Budgeting Apps UX Patterns', 'https://www.appthetics.com/blog/budgeting-apps-ux-patterns', 'empty states, alert restraint, chart choice'],
+  ['Fuse Lab Creative — Finance App Design 101', 'https://fuselabcreative.com/finance-app-design-101-a-complete-blueprint/', 'progress bars, emotional framing'],
+  ['The Skins Factory — Fintech UI/UX Best Practices 2026', 'https://www.theskinsfactory.com/uiux-design-blog/fintech-ui-ux-design', 'deliberate friction, palette, light and dark'],
+  ['Quicken — Apps with Customizable Budget Categories', 'https://www.quicken.com/blog/top-personal-finance-apps-with-customizable-budget-categories/', 'category rules, tags, rollover'],
+  ['MoneyPatrol — Set Up Categories Like a Pro', 'https://moneypatrol.com/moneytalk/budgeting/online-budget-software-set-up-categories-like-a-pro/', 'merchant consistency, when to split'],
+  ['Eleken — Modern Fintech Design Guide 2026', 'https://www.eleken.co/blog-posts/modern-fintech-design-guide', 'trust, clarity, consistency'],
+];
+const BADGE = {
+  'in place': ['#E4F0E4', '#2C6B3F'],
+  'partial': ['#FAEEDA', '#8A5A16'],
+  'missing': ['#FBE4DE', '#A93B1F'],
+};
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      patterns: P.map((p, i) => ({
+        num: String(i + 1).padStart(2, '0'), title: p[0], status: p[1], body: p[2], verdict: p[3],
+        badgeBg: BADGE[p[1]][0], badgeFg: BADGE[p[1]][1],
+      })),
+      changes: C.map((c, i) => ({ num: i + 1, title: c[0], body: c[1], effort: c[2] })),
+      sources: S.map(s => ({ name: s[0], url: s[1], note: s[2] })),
+    };
+  }
+}
+</script>
+</body>
+</html>
