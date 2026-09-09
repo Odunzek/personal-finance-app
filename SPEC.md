@@ -35,10 +35,11 @@ iOS is not needed now but is a future option without a rewrite, since Flutter sh
 8. **Sync**: the same data available and editable from phone, tablet, and laptop web, via Supabase
 9. **Settings**: account management, PIN/biometric management (mobile), theme, about
 10. **App-level PIN/biometric lock** on the mobile apps
+11. **Daily/scheduled reminder notifications** — local, on-device scheduled notifications nudging you to log the day's transactions; no backend involvement, purely a device-level feature
 
 ## Explicitly deferred (v2+)
+- **Budgeting** (spending limits, alerts) and **debt tracking/payoff planning** (loan/credit balances, progress) — grouped together as the first post-v1 milestone
 - Recurring/scheduled transactions
-- Budgets with alerts
 - Receipt photo attachments
 - Home-screen quick-add widget
 - AI-based insights/analysis
