@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 body { margin:0; background:#DCD8CD; }
-a { color:#0B7C7C; } a:hover { color:#0FA3A3; }
+a { color:#2C6E79; } a:hover { color:#5CA2AC; }
 input::placeholder { color:#9AA8A4; }
 </style>
 </helmet>
@@ -23,13 +23,21 @@ input::placeholder { color:#9AA8A4; }
 
 <sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ true }}">
 <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:40px 24px 28px">
-<div style="display:flex;align-items:center;gap:9px"><div style="width:13px;height:13px;border-radius:4px;background:#0FA3A3"></div><div style="font-size:14px;letter-spacing:0.6px;font-weight:600">Kinscope</div></div>
+<div style="display:flex;align-items:center;gap:11px">
+<sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}">
+<img src="brand/kinscope-mark.svg" alt="Kinscope" style="width:38px;height:auto;display:block">
+</sc-if>
+<sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}">
+<img src="brand/kinscope-mark-light.svg" alt="Kinscope" style="width:38px;height:auto;display:block">
+</sc-if>
+<div style="font-family:'Bricolage Grotesque',system-ui;font-size:26px;font-weight:600;letter-spacing:-1px">Kinscope</div>
+</div>
 <div style="display:flex;flex-direction:column;gap:18px">
 <div style="font-size:38px;line-height:1.05;font-weight:600;letter-spacing:-1px">Three accounts.<br>One household<br>view.</div>
 <div style="font-size:15px;line-height:1.5;color:{{ t.mut }};max-width:280px">Chequing, savings and business in one place. Everyone sees the same numbers.</div>
 </div>
 <div style="display:flex;flex-direction:column;gap:12px">
-<div onClick="{{ goLink }}" style="background:#0FA3A3;color:#04201F;text-align:center;padding:16px;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer" style-hover="background:#14BDBD">Set up my household</div>
+<div onClick="{{ goLink }}" style="background:#5CA2AC;color:#04201F;text-align:center;padding:16px;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer" style-hover="background:#14BDBD">Set up my household</div>
 <div onClick="{{ loadDemo }}" style="text-align:center;padding:12px;font-size:14px;color:{{ t.mut }};cursor:pointer">Explore with sample data</div>
 </div>
 </div>
@@ -39,7 +47,7 @@ input::placeholder { color:#9AA8A4; }
 <div style="flex:1;display:flex;flex-direction:column;padding:20px 24px 28px">
 <div onClick="{{ goWelcome }}" style="font-size:14px;color:{{ t.mut }};cursor:pointer;padding:6px 0">← Back</div>
 <div style="display:flex;gap:6px;margin-top:14px">
-<div style="flex:1;height:3px;border-radius:2px;background:#0FA3A3"></div>
+<div style="flex:1;height:3px;border-radius:2px;background:#5CA2AC"></div>
 <div style="flex:1;height:3px;border-radius:2px;background:{{ t.line }}"></div>
 </div>
 <div style="font-size:28px;font-weight:600;letter-spacing:-0.6px;margin-top:26px">Link your accounts</div>
@@ -57,7 +65,7 @@ input::placeholder { color:#9AA8A4; }
 </sc-for>
 </div>
 <div style="flex:1"></div>
-<div onClick="{{ finishSetup }}" style="background:#0FA3A3;color:#04201F;text-align:center;padding:16px;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer">{{ linkCta }}</div>
+<div onClick="{{ finishSetup }}" style="background:#5CA2AC;color:#04201F;text-align:center;padding:16px;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer">{{ linkCta }}</div>
 </div>
 </sc-if>
 
@@ -65,22 +73,30 @@ input::placeholder { color:#9AA8A4; }
 <div style="flex:1;overflow:auto;padding:20px 20px 96px">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
 <div>
-<div style="font-size:12px;letter-spacing:1.5px;color:{{ t.mut }};text-transform:uppercase">Household</div>
-<div style="font-size:18px;font-weight:600;margin-top:2px">Marchand family</div>
+<div style="display:flex;align-items:center;gap:8px">
+<sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}">
+<img src="brand/kinscope-mark.svg" alt="Kinscope" style="width:22px;height:auto;display:block">
+</sc-if>
+<sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}">
+<img src="brand/kinscope-mark-light.svg" alt="Kinscope" style="width:22px;height:auto;display:block">
+</sc-if>
+<div style="font-size:13px;font-weight:600;letter-spacing:0.2px">Kinscope</div>
+</div>
+<div style="font-size:18px;font-weight:600;margin-top:8px;white-space:nowrap">Marchand family</div>
 </div>
 <div style="display:flex">
 <div style="width:30px;height:30px;border-radius:50%;background:{{ t.chip }};border:2px solid {{ t.bg }};font-size:12px;display:flex;align-items:center;justify-content:center;color:{{ t.ink }}">D</div>
-<div style="width:30px;height:30px;border-radius:50%;background:#0FA3A3;border:2px solid {{ t.bg }};font-size:12px;display:flex;align-items:center;justify-content:center;color:#04201F;margin-left:-8px">M</div>
+<div style="width:30px;height:30px;border-radius:50%;background:#5CA2AC;border:2px solid {{ t.bg }};font-size:12px;display:flex;align-items:center;justify-content:center;color:#04201F;margin-left:-8px">M</div>
 </div>
 </div>
 
 <div style="font-size:13px;color:{{ t.mut }}">Total balance</div>
 <div style="font-family:'Bricolage Grotesque',system-ui;font-size:46px;font-weight:600;letter-spacing:-2.2px;font-variant-numeric:tabular-nums;margin-top:4px">{{ totalBalance }}</div>
-<div style="font-size:13px;color:#2F8F6B;margin-top:6px">{{ weekDelta }}</div>
+<div style="font-size:13px;color:{{ t.pos }};margin-top:6px">{{ weekDelta }}</div>
 
 <div style="display:flex;gap:10px;margin-top:20px;overflow:auto">
 <sc-for list="{{ accounts }}" as="a" hint-placeholder-count="3">
-<div onClick="{{ a.open }}" style="min-width:126px;background:{{ t.card }};border:1px solid {{ t.line }};border-radius:14px;padding:14px;cursor:pointer" style-hover="border-color:#0FA3A3">
+<div onClick="{{ a.open }}" style="min-width:126px;background:{{ t.card }};border:1px solid {{ t.line }};border-radius:14px;padding:14px;cursor:pointer" style-hover="border-color:#5CA2AC">
 <div style="font-size:12px;color:{{ t.mut }}">{{ a.name }}</div>
 <div style="font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:6px">{{ a.balance }}</div>
 <div style="font-size:11px;color:{{ t.mut2 }};margin-top:4px">{{ a.number }}</div>
@@ -92,7 +108,7 @@ input::placeholder { color:#9AA8A4; }
 <div style="border:1px dashed {{ t.line }};border-radius:16px;padding:26px 20px;text-align:center;margin-top:24px">
 <div style="font-size:16px;font-weight:600">Nothing recorded yet</div>
 <div style="font-size:13px;color:{{ t.mut }};margin-top:8px;line-height:1.5">Add your first expense and budgets will start filling in.</div>
-<div onClick="{{ navAdd }}" style="display:inline-block;margin-top:16px;background:#0FA3A3;color:#04201F;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">Add an expense</div>
+<div onClick="{{ navAdd }}" style="display:inline-block;margin-top:16px;background:#5CA2AC;color:#04201F;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">Add an expense</div>
 <div onClick="{{ loadDemo }}" style="font-size:13px;color:{{ t.mut }};margin-top:14px;cursor:pointer">or load sample data</div>
 </div>
 </sc-if>
@@ -100,13 +116,13 @@ input::placeholder { color:#9AA8A4; }
 <sc-if value="{{ hasData }}" hint-placeholder-val="{{ true }}">
 <div style="display:flex;align-items:baseline;justify-content:space-between;margin:28px 0 12px">
 <div style="font-size:15px;font-weight:600">September budget</div>
-<div onClick="{{ navBudgets }}" style="font-size:13px;color:#0FA3A3;cursor:pointer">All</div>
+<div onClick="{{ navBudgets }}" style="font-size:13px;color:{{ t.accText }};cursor:pointer">All</div>
 </div>
 <div style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px">
 <div style="display:flex;justify-content:space-between;font-size:13px;color:{{ t.mut }}">
 <span>{{ monthSummary }}</span><span style="color:{{ t.ink }};font-variant-numeric:tabular-nums">{{ monthPct }}</span>
 </div>
-<div style="height:8px;border-radius:4px;background:{{ t.track }};overflow:hidden"><div style="width:{{ monthPct }};height:100%;background:#0FA3A3"></div></div>
+<div style="height:8px;border-radius:4px;background:{{ t.track }};overflow:hidden"><div style="width:{{ monthPct }};height:100%;background:#5CA2AC"></div></div>
 <sc-for list="{{ topBudgets }}" as="b" hint-placeholder-count="3">
 <div>
 <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>{{ b.name }}</span><span style="color:{{ t.mut }};font-variant-numeric:tabular-nums">{{ b.label }}</span></div>
@@ -117,7 +133,7 @@ input::placeholder { color:#9AA8A4; }
 
 <div style="display:flex;align-items:baseline;justify-content:space-between;margin:28px 0 12px">
 <div style="font-size:15px;font-weight:600">Recent</div>
-<div onClick="{{ navTx }}" style="font-size:13px;color:#0FA3A3;cursor:pointer">All</div>
+<div onClick="{{ navTx }}" style="font-size:13px;color:{{ t.accText }};cursor:pointer">All</div>
 </div>
 <sc-for list="{{ recent }}" as="x" hint-placeholder-count="4">
 <div onClick="{{ x.open }}" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid {{ t.line }};cursor:pointer">
@@ -189,12 +205,12 @@ input::placeholder { color:#9AA8A4; }
 <div style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:16px;padding:16px;margin-top:14px">
 <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:{{ t.mut }}">Split</div>
 <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
-<div style="width:28px;height:28px;border-radius:50%;background:#0FA3A3;color:#04201F;font-size:12px;display:flex;align-items:center;justify-content:center">M</div>
+<div style="width:28px;height:28px;border-radius:50%;background:#5CA2AC;color:#04201F;font-size:12px;display:flex;align-items:center;justify-content:center">M</div>
 <div style="flex:1;font-size:14px">{{ splitLine }}</div>
 </div>
 </div>
 <div style="display:flex;gap:10px;margin-top:16px">
-<div onClick="{{ navCat }}" style="flex:1;text-align:center;padding:14px;border-radius:13px;border:1px solid {{ t.line }};font-size:14px;cursor:pointer" style-hover="border-color:#0FA3A3">Recategorize</div>
+<div onClick="{{ navCat }}" style="flex:1;text-align:center;padding:14px;border-radius:13px;border:1px solid {{ t.line }};font-size:14px;cursor:pointer" style-hover="border-color:#5CA2AC">Recategorize</div>
 <div onClick="{{ settleTx }}" style="flex:1;text-align:center;padding:14px;border-radius:13px;background:{{ settleBg }};color:{{ settleFg }};font-size:14px;font-weight:600;cursor:pointer">{{ settleLabel }}</div>
 </div>
 </div>
@@ -210,7 +226,7 @@ input::placeholder { color:#9AA8A4; }
 <div onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:12px;padding:15px;border-radius:14px;background:{{ t.card }};border:1px solid {{ c.border }};cursor:pointer">
 <div style="width:10px;height:10px;border-radius:3px;background:{{ c.color }}"></div>
 <div style="flex:1;font-size:15px">{{ c.name }}</div>
-<div style="font-size:14px;color:#0FA3A3">{{ c.check }}</div>
+<div style="font-size:14px;color:{{ t.accText }}">{{ c.check }}</div>
 </div>
 </sc-for>
 </div>
@@ -235,13 +251,13 @@ input::placeholder { color:#9AA8A4; }
 </div>
 <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px">
 <sc-for list="{{ budgetsFull }}" as="b" hint-placeholder-count="6">
-<div onClick="{{ b.edit }}" style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:14px;padding:14px;cursor:pointer" style-hover="border-color:#0FA3A3">
+<div onClick="{{ b.edit }}" style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:14px;padding:14px;cursor:pointer" style-hover="border-color:#5CA2AC">
 <div style="display:flex;justify-content:space-between;align-items:baseline">
 <div style="font-size:14px;font-weight:500">{{ b.name }}</div>
 <div style="font-size:13px;color:{{ t.mut }};font-variant-numeric:tabular-nums">{{ b.label }}</div>
 </div>
 <div style="height:6px;border-radius:3px;background:{{ t.track }};overflow:hidden;margin-top:10px"><div style="width:{{ b.pct }};height:100%;background:{{ b.color }}"></div></div>
-<div style="font-size:12px;color:{{ b.color }};margin-top:8px">{{ b.note }}</div>
+<div style="font-size:12px;color:{{ b.noteColor }};margin-top:8px">{{ b.note }}</div>
 </div>
 </sc-for>
 </div>
@@ -253,7 +269,7 @@ input::placeholder { color:#9AA8A4; }
 <div style="display:flex;justify-content:space-between;align-items:center">
 <div onClick="{{ navBudgets }}" style="font-size:14px;color:{{ t.mut }};cursor:pointer">Cancel</div>
 <div style="font-size:14px;font-weight:600">{{ editing.name }}</div>
-<div onClick="{{ navBudgets }}" style="font-size:14px;color:#0FA3A3;font-weight:600;cursor:pointer">Done</div>
+<div onClick="{{ navBudgets }}" style="font-size:14px;color:{{ t.accText }};font-weight:600;cursor:pointer">Done</div>
 </div>
 <div style="text-align:center;padding:34px 0 10px">
 <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:{{ t.mut }}">Monthly limit</div>
@@ -306,7 +322,7 @@ input::placeholder { color:#9AA8A4; }
 <div style="font-size:24px;font-weight:600;letter-spacing:-0.5px">Goals</div>
 <div style="display:flex;flex-direction:column;gap:12px;margin-top:18px">
 <sc-for list="{{ goals }}" as="g" hint-placeholder-count="3">
-<div onClick="{{ g.open }}" style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:16px;padding:16px;cursor:pointer" style-hover="border-color:#0FA3A3">
+<div onClick="{{ g.open }}" style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:16px;padding:16px;cursor:pointer" style-hover="border-color:#5CA2AC">
 <div style="display:flex;justify-content:space-between;align-items:baseline">
 <div style="font-size:15px;font-weight:600">{{ g.name }}</div>
 <div style="font-size:12px;color:{{ t.mut }}">{{ g.eta }}</div>
@@ -319,13 +335,13 @@ input::placeholder { color:#9AA8A4; }
 </div>
 </sc-for>
 <div style="background:{{ t.debtBg }};border:1px solid {{ t.debtLine }};border-radius:16px;padding:16px">
-<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#0FA3A3">Debt payoff</div>
+<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:{{ t.accText }}">Debt payoff</div>
 <div style="font-size:15px;font-weight:600;margin-top:8px">Visa balance</div>
 <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px">
 <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">$3,420</div>
 <div style="font-size:13px;color:{{ t.mut }}">at 19.99%</div>
 </div>
-<div style="height:7px;border-radius:4px;background:{{ t.track }};overflow:hidden;margin-top:10px"><div style="width:38%;height:100%;background:#0FA3A3"></div></div>
+<div style="height:7px;border-radius:4px;background:{{ t.track }};overflow:hidden;margin-top:10px"><div style="width:38%;height:100%;background:#5CA2AC"></div></div>
 <div style="font-size:12px;color:{{ t.mut }};margin-top:8px">Clear by June 2027 at $310/mo</div>
 </div>
 </div>
@@ -355,12 +371,12 @@ input::placeholder { color:#9AA8A4; }
 <sc-for list="{{ goal.history }}" as="h" hint-placeholder-count="4">
 <div style="display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid {{ t.line }};font-size:14px">
 <div><div>{{ h.who }}</div><div style="font-size:12px;color:{{ t.mut }};margin-top:2px">{{ h.date }}</div></div>
-<div style="font-variant-numeric:tabular-nums;color:#2F8F6B">{{ h.amount }}</div>
+<div style="font-variant-numeric:tabular-nums;color:{{ t.pos }}">{{ h.amount }}</div>
 </div>
 </sc-for>
 <div style="display:flex;gap:10px;margin-top:20px">
 <div style="flex:1;text-align:center;padding:14px;border-radius:13px;border:1px solid {{ t.line }};font-size:14px;cursor:pointer">Edit target</div>
-<div style="flex:1;text-align:center;padding:14px;border-radius:13px;background:#0FA3A3;color:#04201F;font-size:14px;font-weight:600;cursor:pointer">Add money</div>
+<div style="flex:1;text-align:center;padding:14px;border-radius:13px;background:#5CA2AC;color:#04201F;font-size:14px;font-weight:600;cursor:pointer">Add money</div>
 </div>
 </div>
 </sc-if>
@@ -371,7 +387,7 @@ input::placeholder { color:#9AA8A4; }
 <div style="font-size:24px;font-weight:600;letter-spacing:-0.5px;margin-top:8px">Accounts</div>
 <div style="display:flex;flex-direction:column;gap:12px;margin-top:18px">
 <sc-for list="{{ accountsFull }}" as="a" hint-placeholder-count="3">
-<div onClick="{{ a.open }}" style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:16px;padding:16px;cursor:pointer" style-hover="border-color:#0FA3A3">
+<div onClick="{{ a.open }}" style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:16px;padding:16px;cursor:pointer" style-hover="border-color:#5CA2AC">
 <div style="display:flex;justify-content:space-between">
 <div>
 <div style="font-size:15px;font-weight:600">{{ a.name }}</div>
@@ -384,7 +400,7 @@ input::placeholder { color:#9AA8A4; }
 </div>
 </div>
 </sc-for>
-<div onClick="{{ goLink }}" style="border:1px dashed {{ t.line }};border-radius:16px;padding:16px;text-align:center;font-size:14px;color:{{ t.mut }};cursor:pointer" style-hover="border-color:#0FA3A3;color:#0FA3A3">+ Link another account</div>
+<div onClick="{{ goLink }}" style="border:1px dashed {{ t.line }};border-radius:16px;padding:16px;text-align:center;font-size:14px;color:{{ t.mut }};cursor:pointer" style-hover="border-color:#5CA2AC;color:#5CA2AC">+ Link another account</div>
 </div>
 </div>
 </sc-if>
@@ -399,7 +415,7 @@ input::placeholder { color:#9AA8A4; }
 <div style="display:flex;gap:12px;margin-top:20px">
 <div style="flex:1;background:{{ t.card }};border:1px solid {{ t.line }};border-radius:14px;padding:14px">
 <div style="font-size:12px;color:{{ t.mut }}">In this month</div>
-<div style="font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:4px;color:#2F8F6B">{{ account.in }}</div>
+<div style="font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:4px;color:{{ t.pos }}">{{ account.in }}</div>
 </div>
 <div style="flex:1;background:{{ t.card }};border:1px solid {{ t.line }};border-radius:14px;padding:14px">
 <div style="font-size:12px;color:{{ t.mut }}">Out</div>
@@ -473,7 +489,7 @@ input::placeholder { color:#9AA8A4; }
 <div style="flex:1"><div style="font-size:14px">{{ m.name }}</div><div style="font-size:12px;color:{{ t.mut }}">{{ m.role }}</div></div>
 </div>
 </sc-for>
-<div style="padding:14px 16px;font-size:14px;color:#0FA3A3;cursor:pointer">+ Invite someone</div>
+<div style="padding:14px 16px;font-size:14px;color:{{ t.accText }};cursor:pointer">+ Invite someone</div>
 </div>
 <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:{{ t.mut }};margin:22px 0 10px">Preferences</div>
 <div style="background:{{ t.card }};border:1px solid {{ t.line }};border-radius:16px;overflow:hidden">
@@ -497,7 +513,7 @@ input::placeholder { color:#9AA8A4; }
 </div>
 </sc-for>
 </div>
-<div onClick="{{ navAdd }}" style="position:absolute;right:18px;bottom:86px;width:56px;height:56px;border-radius:18px;background:#0FA3A3;color:#04201F;font-size:28px;font-weight:500;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 24px rgba(255,107,74,0.35)">+</div>
+<div onClick="{{ navAdd }}" style="position:absolute;right:18px;bottom:86px;width:56px;height:56px;border-radius:18px;background:#5CA2AC;color:#04201F;font-size:28px;font-weight:500;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 24px rgba(255,107,74,0.35)">+</div>
 </sc-if>
 
 </div>
@@ -507,14 +523,16 @@ input::placeholder { color:#9AA8A4; }
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:500,&quot;height&quot;:990}}">
 const THEMES = {
   dark:  { bg:'#0F1A1C', card:'#162426', bar:'#132022', line:'#233436', track:'#1E2E30',
-           chip:'#1C2C2E', ink:'#EEF3F1', mut:'#8DA39E', mut2:'#5F7370',
+           chip:'#1C2C2E', ink:'#EEF3F1', mut:'#8DA39E', mut2:'#7A8F8A',
+           accText:'#7FC3CC', pos:'#59BE93', over:'#E0765A', warnText:'#D9A63A',
            debtBg:'#122B2A', debtLine:'#1F4645' },
   light: { bg:'#FAF7F0', card:'#FFFFFF', bar:'#FFFFFF', line:'#E5E0D5', track:'#EAE5DA',
-           chip:'#F0EDE4', ink:'#12211F', mut:'#66756F', mut2:'#98A6A1',
-           debtBg:'#EAF7F6', debtLine:'#BFE3E1' },
+           chip:'#F0EDE4', ink:'#131E1D', mut:'#5C6A65', mut2:'#5A6863',
+           accText:'#2C6E79', pos:'#1F6B4F', over:'#A93B1F', warnText:'#8A5A16',
+           debtBg:'#EDF5F6', debtLine:'#C6DFE3' },
 };
 const CATS = [
-  { name:'Housing', color:'#0FA3A3' }, { name:'Groceries', color:'#C98A16' },
+  { name:'Housing', color:'#5CA2AC' }, { name:'Groceries', color:'#C98A16' },
   { name:'Dining', color:'#C98A16' }, { name:'Transit', color:'#2F8F6B' },
   { name:'Utilities', color:'#2F8F6B' }, { name:'Kids', color:'#2F8F6B' },
 ];
@@ -558,7 +576,7 @@ class Component extends DCLogic {
       ...x, initials: initials(x.merchant),
       meta: x.cat + ' · ' + x.acct,
       amount: (x.amt > 0 ? '+' : '') + money(x.amt),
-      color: x.amt > 0 ? '#2F8F6B' : t.ink,
+      color: x.amt > 0 ? t.pos : t.ink,
       open: () => this.setState({ screen:'detail', detailId:x.id }),
     }));
   }
@@ -575,8 +593,9 @@ class Component extends DCLogic {
     const budgets = CATS.map(c => {
       const spent = spentByCat(c.name), lim = st.limits[c.name], left = lim - spent;
       const ratio = spent / lim;
-      const color = ratio >= 1 ? '#0FA3A3' : ratio >= 0.7 ? '#C98A16' : '#2F8F6B';
-      return { id:c.name, name:c.name, spent, limit:lim, color,
+      const color = ratio >= 1 ? '#B4462F' : ratio >= 0.7 ? '#C98A16' : '#5CA2AC';
+      const noteColor = ratio >= 1 ? t.over : ratio >= 0.7 ? t.warnText : t.mut;
+      return { id:c.name, name:c.name, spent, limit:lim, color, noteColor,
         label: money0(spent) + ' / ' + money0(lim), pct: pctOf(spent, lim),
         spentLabel: money(spent),
         note: left <= 0 ? 'Fully spent' : money0(left) + ' left · 22 days',
@@ -613,12 +632,13 @@ class Component extends DCLogic {
     const editing = budgets.find(b => b.id === st.editId) || budgets[0];
 
     const tab = (name, key) => ({ name, go:this.go(key),
-      color: s === key ? '#0FA3A3' : t.mut2, fill: s === key ? '#0FA3A3' : 'transparent' });
+      color: s === key ? t.accText : t.mut2, fill: s === key ? '#5CA2AC' : 'transparent' });
 
     const amtNum = parseFloat(st.amount) || 0;
 
     return {
       t, isDark: st.theme === 'dark',
+      isLight: st.theme === 'light',
       isWelcome:s==='welcome', isLink:s==='link', isHome:s==='home', isTx:s==='tx',
       isDetail:s==='detail', isCat:s==='cat', isBudgets:s==='budgets', isBudgetEdit:s==='budgetEdit',
       isAdd:s==='add', isGoals:s==='goals', isGoalDetail:s==='goalDetail', isAccounts:s==='accounts',
@@ -636,7 +656,7 @@ class Component extends DCLogic {
       linkOptions: ACCTS.map((a,i) => {
         const on = st.linked.includes(i);
         return { ...a, balance: money0(a.base),
-          border: on ? '#0FA3A3' : t.line, fill: on ? '#0FA3A3' : 'transparent',
+          border: on ? '#5CA2AC' : t.line, fill: on ? '#5CA2AC' : 'transparent',
           toggle: () => this.setState(p => ({ linked: p.linked.includes(i) ? p.linked.filter(v => v !== i) : [...p.linked, i].sort() })) };
       }),
       linkCta: st.linked.length ? 'Link ' + st.linked.length + ' account' + (st.linked.length > 1 ? 's' : '') : 'Skip for now',
@@ -653,9 +673,9 @@ class Component extends DCLogic {
       filterCount: filtered.length + ' items',
       filters: ['All','Chequing','Savings','Business','Uncategorized'].map(n => ({
         name:n, pick: () => this.setState({ filter:n }),
-        bg: st.filter === n ? '#0FA3A3' : 'transparent',
+        bg: st.filter === n ? '#5CA2AC' : 'transparent',
         fg: st.filter === n ? '#04201F' : t.mut,
-        border: st.filter === n ? '#0FA3A3' : t.line })),
+        border: st.filter === n ? '#5CA2AC' : t.line })),
 
       detail,
       detailRows: [
@@ -667,11 +687,11 @@ class Component extends DCLogic {
       ],
       splitLine: settled ? 'Settled between Marie and Denis' : 'Marie paid · Denis owes ' + money(Math.abs(detailBase.amt) / 2),
       settleLabel: settled ? 'Settled ✓' : 'Mark settled',
-      settleBg: settled ? t.chip : '#0FA3A3', settleFg: settled ? t.mut : '#04201F',
+      settleBg: settled ? t.chip : '#5CA2AC', settleFg: settled ? t.mut : '#04201F',
       settleTx: () => this.setState(p => ({ settled: { ...p.settled, [p.detailId]: !p.settled[p.detailId] } })),
       catRows: CATS.map(c => ({ name:c.name, color:c.color,
         check: detailBase.cat === c.name ? '✓' : '',
-        border: detailBase.cat === c.name ? '#0FA3A3' : t.line,
+        border: detailBase.cat === c.name ? '#5CA2AC' : t.line,
         pick: () => this.setState(p => ({ screen:'detail',
           txs: p.txs.map(x => x.id === p.detailId ? { ...x, cat:c.name } : x) })) })),
 
@@ -695,10 +715,10 @@ class Component extends DCLogic {
       months: [
         { label:'Apr', h:'52%', color:t.chip }, { label:'May', h:'68%', color:t.chip },
         { label:'Jun', h:'46%', color:t.chip }, { label:'Jul', h:'82%', color:t.chip },
-        { label:'Aug', h:'71%', color:t.chip }, { label:'Sep', h:'63%', color:'#0FA3A3' },
+        { label:'Aug', h:'71%', color:t.chip }, { label:'Sep', h:'63%', color:'#5CA2AC' },
       ],
       members: [
-        { name:'Marie Marchand', role:'Owner · all accounts', initial:'M', color:'#0FA3A3' },
+        { name:'Marie Marchand', role:'Owner · all accounts', initial:'M', color:'#5CA2AC' },
         { name:'Denis Marchand', role:'Can view and add', initial:'D', color:'#2F8F6B' },
         { name:'Léa (16)', role:'Kids allowance only', initial:'L', color:'#C98A16' },
       ],
@@ -707,8 +727,8 @@ class Component extends DCLogic {
         { k:'Budget reset', v:'1st of month' }, { k:'Alerts', v:'Over 80% of a budget' },
       ],
       setDark: () => this.setState({ theme:'dark' }), setLight: () => this.setState({ theme:'light' }),
-      darkBg: st.theme === 'dark' ? '#0FA3A3' : 'transparent', darkFg: st.theme === 'dark' ? '#04201F' : t.mut,
-      lightBg: st.theme === 'light' ? '#0FA3A3' : 'transparent', lightFg: st.theme === 'light' ? '#04201F' : t.mut,
+      darkBg: st.theme === 'dark' ? '#5CA2AC' : 'transparent', darkFg: st.theme === 'dark' ? '#04201F' : t.mut,
+      lightBg: st.theme === 'light' ? '#5CA2AC' : 'transparent', lightFg: st.theme === 'light' ? '#04201F' : t.mut,
       loadDemo: () => this.setState({ txs: DEMO.map(x => ({ ...x })), screen:'home', nextId:100 }),
       resetApp: () => this.setState({ txs:[], screen:'welcome', linked:[0,1,2], settled:{}, filter:'All', limits:{ ...LIMITS } }),
 
@@ -717,7 +737,7 @@ class Component extends DCLogic {
       setMerchant: (e) => this.setState({ merchant: e.target.value }),
       draftAccount: ACCTS[st.acctIdx].name,
       cycleAccount: () => this.setState(p => ({ acctIdx: (p.acctIdx + 1) % 3 })),
-      saveColor: amtNum > 0 ? '#0FA3A3' : t.mut2,
+      saveColor: amtNum > 0 ? t.accText : t.mut2,
       saveExpense: () => {
         if (!amtNum) return;
         this.setState(p => ({
@@ -727,9 +747,9 @@ class Component extends DCLogic {
         }));
       },
       catChips: CATS.map(c => ({ name:c.name, pick: () => this.setState({ cat:c.name }),
-        bg: st.cat === c.name ? '#0FA3A3' : 'transparent',
+        bg: st.cat === c.name ? '#5CA2AC' : 'transparent',
         fg: st.cat === c.name ? '#04201F' : t.mut,
-        border: st.cat === c.name ? '#0FA3A3' : t.line })),
+        border: st.cat === c.name ? '#5CA2AC' : t.line })),
       keys: ['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(label => ({ label,
         press: () => this.setState(p => {
           if (label === '⌫') return { amount: p.amount.length > 1 ? p.amount.slice(0,-1) : '0' };
