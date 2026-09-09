@@ -4,6 +4,7 @@
     <path d="M21.33 7.77 A43 43 0 0 1 86.41 28.29"></path>
     <path d="M89 43 A43 43 0 0 1 66.19 80.96"></path>
   </g>
+  <circle cx="87.7" cy="35.6" r="7.5" fill="#5CA2AC"></circle>
   <g stroke="#5CA2AC" stroke-width="6" stroke-linecap="round">
     <path d="M6 69.5 L6 60"></path>
     <path d="M14.5 69.5 L14.5 53"></path>
