@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
@@ -33,6 +34,7 @@ class ActivityScreen extends StatefulWidget {
 class _ActivityScreenState extends State<ActivityScreen> {
   int? _filterCategoryId;
   late Future<_ActivityData> _dataFuture;
+  int? _selectedTransactionId;
 
   @override
   void initState() {
@@ -65,6 +67,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
     await _dataFuture;
   }
 
+  Future<void> _openDetail(model.Transaction t, Category? category, bool isTablet) async {
+    if (isTablet) {
+      setState(() => _selectedTransactionId = t.id);
+      return;
+    }
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => TransactionDetailScreen(transaction: t, category: category),
+      ),
+    );
+    if (changed == true) _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
@@ -76,106 +91,154 @@ class _ActivityScreenState extends State<ActivityScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           final data = snapshot.data!;
-          return CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Activity',
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          Text(
-                            '${data.transactions.length} items',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 36,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: [
-                            _FilterChip(
-                              label: 'All',
-                              selected: _filterCategoryId == null,
-                              onTap: () =>
-                                  setState(() {
-                                    _filterCategoryId = null;
-                                    _load();
-                                  }),
-                            ),
-                            ...data.categoriesById.values.map(
-                              (c) => Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: _FilterChip(
-                                  label: c.name,
-                                  selected: _filterCategoryId == c.id,
-                                  onTap: () => setState(() {
-                                    _filterCategoryId = c.id;
-                                    _load();
-                                  }),
-                                ),
-                              ),
-                            ),
-                          ],
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isTablet = constraints.maxWidth >= kTabletBreakpoint;
+              final list = _buildList(context, data, isTablet);
+
+              if (!isTablet) return list;
+
+              model.Transaction? selected;
+              for (final t in data.transactions) {
+                if (t.id == _selectedTransactionId) selected = t;
+              }
+
+              return Row(
+                children: [
+                  SizedBox(
+                    width: 380,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          right: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              if (data.transactions.isEmpty)
-                SliverFillRemaining(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outlineVariant,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              LucideIcons.folderOpen,
-                              size: 40,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Nothing here',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text('No transactions match this filter.'),
-                          ],
-                        ),
-                      ).animate().fadeIn(duration: 300.ms),
+                      child: list,
                     ),
                   ),
-                )
-              else
-                ..._buildGroupedSlivers(context, data),
-            ],
+                  Expanded(
+                    child: selected == null
+                        ? Center(
+                            child: Text(
+                              'Select a transaction to see its details.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: TransactionDetailPane(
+                              key: ValueKey(selected.id),
+                              transaction: selected,
+                              category: data.categoriesById[selected.categoryId],
+                              transactionRepository: widget.transactionRepository,
+                              categoryRepository: widget.categoryRepository,
+                              onRecategorized: (_) => _reload(),
+                              onDelete: () {
+                                setState(() => _selectedTransactionId = null);
+                                _reload();
+                              },
+                            ),
+                          ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
     );
   }
 
-  List<Widget> _buildGroupedSlivers(BuildContext context, _ActivityData data) {
+  Widget _buildList(BuildContext context, _ActivityData data, bool isTablet) {
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Activity', style: Theme.of(context).textTheme.headlineSmall),
+                    Text(
+                      '${data.transactions.length} items',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _FilterChip(
+                        label: 'All',
+                        selected: _filterCategoryId == null,
+                        onTap: () => setState(() {
+                          _filterCategoryId = null;
+                          _load();
+                        }),
+                      ),
+                      ...data.categoriesById.values.map(
+                        (c) => Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: _FilterChip(
+                            label: c.name,
+                            selected: _filterCategoryId == c.id,
+                            onTap: () => setState(() {
+                              _filterCategoryId = c.id;
+                              _load();
+                            }),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (data.transactions.isEmpty)
+          SliverFillRemaining(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        LucideIcons.folderOpen,
+                        size: 40,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('Nothing here', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      const Text('No transactions match this filter.'),
+                    ],
+                  ),
+                ).animate().fadeIn(duration: 300.ms),
+              ),
+            ),
+          )
+        else
+          ..._buildGroupedSlivers(context, data, isTablet),
+      ],
+    );
+  }
+
+  List<Widget> _buildGroupedSlivers(BuildContext context, _ActivityData data, bool isTablet) {
     final groups = <String, List<model.Transaction>>{};
     for (final t in data.transactions) {
       final key = DateFormat.yMMMd().format(t.occurredAt);
@@ -196,10 +259,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    entry.key.toUpperCase(),
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
+                  Text(entry.key.toUpperCase(), style: Theme.of(context).textTheme.labelMedium),
                   Text(
                     formatMoney(total, showSign: true),
                     style: Theme.of(context).textTheme.labelMedium,
@@ -212,21 +272,20 @@ class _ActivityScreenState extends State<ActivityScreen> {
               itemBuilder: (context, index) {
                 final t = entry.value[index];
                 final delay = (animIndex++).clamp(0, 12) * 30;
-                return TransactionTile(
-                  transaction: t,
-                  category: data.categoriesById[t.categoryId],
-                  showDate: false,
-                  onTap: () async {
-                    final changed = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) => TransactionDetailScreen(
-                          transaction: t,
-                          category: data.categoriesById[t.categoryId],
-                        ),
-                      ),
-                    );
-                    if (changed == true) _reload();
-                  },
+                final category = data.categoriesById[t.categoryId];
+                return Container(
+                  decoration: isTablet && t.id == _selectedTransactionId
+                      ? BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                        )
+                      : null,
+                  child: TransactionTile(
+                    transaction: t,
+                    category: category,
+                    showDate: false,
+                    onTap: () => _openDetail(t, category, isTablet),
+                  ),
                 ).animate().fadeIn(delay: delay.ms, duration: 220.ms).slideX(begin: 0.02, end: 0);
               },
             ),

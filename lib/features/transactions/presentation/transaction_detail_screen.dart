@@ -4,11 +4,174 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/category.dart';
-import '../../../core/models/money.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/category_badge.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
+
+/// The recategorize/delete/detail-row content for a single transaction,
+/// shared between the full-screen phone route ([TransactionDetailScreen])
+/// and the tablet two-pane layout in [ActivityScreen], so the logic only
+/// lives in one place.
+class TransactionDetailPane extends StatefulWidget {
+  final model.Transaction transaction;
+  final Category? category;
+  final TransactionRepository transactionRepository;
+  final CategoryRepository categoryRepository;
+  final ValueChanged<Category> onRecategorized;
+  final VoidCallback onDelete;
+
+  const TransactionDetailPane({
+    super.key,
+    required this.transaction,
+    required this.category,
+    required this.transactionRepository,
+    required this.categoryRepository,
+    required this.onRecategorized,
+    required this.onDelete,
+  });
+
+  @override
+  State<TransactionDetailPane> createState() => _TransactionDetailPaneState();
+}
+
+class _TransactionDetailPaneState extends State<TransactionDetailPane> {
+  late Category? _category;
+
+  @override
+  void initState() {
+    super.initState();
+    _category = widget.category;
+  }
+
+  @override
+  void didUpdateWidget(TransactionDetailPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.transaction.id != widget.transaction.id) {
+      _category = widget.category;
+    }
+  }
+
+  Future<void> _recategorize() async {
+    final categories = await widget.categoryRepository.listActiveCategories(
+      widget.transaction.profileId,
+    );
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<Category>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: categories
+              .map(
+                (c) => ListTile(
+                  leading: CategoryBadge(
+                    icon: iconForKey(c.iconKey),
+                    color: Color(c.colorArgb),
+                    size: 32,
+                    iconSize: 18,
+                  ),
+                  title: Text(c.name),
+                  trailing: c.id == _category?.id
+                      ? const Icon(LucideIcons.check)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(c),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
+    if (picked == null || picked.id == _category?.id) return;
+    await widget.transactionRepository.updateTransaction(
+      widget.transaction.id,
+      categoryId: picked.id,
+    );
+    setState(() => _category = picked);
+    widget.onRecategorized(picked);
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete transaction?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await widget.transactionRepository.deleteTransaction(widget.transaction.id);
+    widget.onDelete();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.transaction;
+    final isIncome = t.type == CategoryType.income;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            IconButton(onPressed: _confirmDelete, icon: const Icon(LucideIcons.trash2)),
+          ],
+        ),
+        Center(
+          child: CategoryBadge(
+            icon: iconForKey(_category?.iconKey ?? 'other'),
+            color: _category != null ? Color(_category!.colorArgb) : null,
+            size: 56,
+            iconSize: 26,
+          ).animate().scale(
+            begin: const Offset(0.7, 0.7),
+            duration: 350.ms,
+            curve: Curves.easeOutBack,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: Text(
+            t.note?.isNotEmpty == true ? t.note! : (_category?.name ?? 'Uncategorized'),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        Center(
+          child: MoneyText(
+            isIncome ? t.amountMinorUnits : -t.amountMinorUnits,
+            fontSize: 34,
+            color: isIncome ? Theme.of(context).colorScheme.primary : null,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Column(
+            children: [
+              _DetailRow('Category', _category?.name ?? 'Uncategorized'),
+              _DetailRow('Date', DateFormat.yMMMd().add_jm().format(t.occurredAt)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton(onPressed: _recategorize, child: const Text('Recategorize')),
+      ],
+    );
+  }
+}
 
 class TransactionDetailScreen extends StatefulWidget {
   final model.Transaction transaction;
@@ -32,91 +195,10 @@ class TransactionDetailScreen extends StatefulWidget {
 }
 
 class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
-  late Category? _category;
   bool _changed = false;
 
   @override
-  void initState() {
-    super.initState();
-    _category = widget.category;
-  }
-
-  Future<void> _recategorize() async {
-    final categories = await widget.categoryRepository.listActiveCategories(
-      widget.transaction.profileId,
-    );
-    if (!mounted) return;
-    final picked = await showModalBottomSheet<Category>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: categories
-              .map(
-                (c) => ListTile(
-                  leading: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Color(c.colorArgb),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Icon(
-                      iconForKey(c.iconKey),
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-                  title: Text(c.name),
-                  trailing: c.id == _category?.id
-                      ? const Icon(LucideIcons.check)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(c),
-                ),
-              )
-              .toList(),
-        ),
-      ),
-    );
-    if (picked == null || picked.id == _category?.id) return;
-    await widget.transactionRepository.updateTransaction(
-      widget.transaction.id,
-      categoryId: picked.id,
-    );
-    setState(() {
-      _category = picked;
-      _changed = true;
-    });
-  }
-
-  Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete transaction?'),
-        content: const Text('This cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    await widget.transactionRepository.deleteTransaction(widget.transaction.id);
-    if (mounted) Navigator.of(context).pop(true);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final t = widget.transaction;
-    final isIncome = t.type == CategoryType.income;
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -125,76 +207,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       child: Scaffold(
         appBar: AppBar(
           leading: BackButton(onPressed: () => Navigator.of(context).pop(_changed)),
-          actions: [
-            IconButton(
-              onPressed: _delete,
-              icon: const Icon(LucideIcons.trash2),
-            ),
-          ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          children: [
-            const SizedBox(height: 16),
-            Center(
-              child: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: _category != null
-                      ? Color(_category!.colorArgb)
-                      : Colors.grey,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  iconForKey(_category?.iconKey ?? 'other'),
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ).animate().scale(
-                begin: const Offset(0.7, 0.7),
-                duration: 350.ms,
-                curve: Curves.easeOutBack,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                t.note?.isNotEmpty == true
-                    ? t.note!
-                    : (_category?.name ?? 'Uncategorized'),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            Center(
-              child: Text(
-                formatMoney(isIncome ? t.amountMinorUnits : -t.amountMinorUnits),
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: isIncome
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _DetailRow('Category', _category?.name ?? 'Uncategorized'),
-                  _DetailRow(
-                    'Date',
-                    DateFormat.yMMMd().add_jm().format(t.occurredAt),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: _recategorize,
-              child: const Text('Recategorize'),
-            ),
-          ],
+        body: TransactionDetailPane(
+          transaction: widget.transaction,
+          category: widget.category,
+          transactionRepository: widget.transactionRepository,
+          categoryRepository: widget.categoryRepository,
+          onRecategorized: (_) => setState(() => _changed = true),
+          onDelete: () => Navigator.of(context).pop(true),
         ),
       ),
     );
