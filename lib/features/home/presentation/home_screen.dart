@@ -15,6 +15,7 @@ import '../../categories/data/category_repository.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/presentation/transaction_detail_screen.dart';
 import '../../transactions/presentation/transaction_tile.dart';
+import 'business_summary_card.dart';
 
 class HomeData {
   final List<model.Transaction> all;
@@ -69,11 +70,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final transactions = results[0] as List<model.Transaction>;
     final categories = results[1] as List<Category>;
     final accounts = results[2] as List<Account>;
-    return HomeData(
-      transactions,
-      {for (final c in categories) c.id: c},
-      accounts,
-    );
+    return HomeData(transactions, {
+      for (final c in categories) c.id: c,
+    }, accounts);
   }
 
   Future<void> _reload() async {
@@ -180,16 +179,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 final balance = computeAccountBalance(account, data.all);
                 final isLiability = account.type == AccountType.liability;
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(account.name, style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        account.name,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                       MoneyText(
                         isLiability ? -balance : balance,
                         fontSize: 15,
@@ -204,32 +211,39 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
 
-    Widget recentTile(int i) => TransactionTile(
-      transaction: recent[i],
-      category: recent[i].categoryId == null
-          ? null
-          : data.categoriesById[recent[i].categoryId],
-      accountsById: {for (final a in data.accounts) a.id: a},
-      onTap: () async {
-        final t = recent[i];
-        final changed = await Navigator.of(context).push<bool>(
-          MaterialPageRoute(
-            builder: (_) => TransactionDetailScreen(
-              transaction: t,
-              category: t.categoryId == null ? null : data.categoriesById[t.categoryId],
-            ),
-          ),
-        );
-        if (changed == true) {
-          _reload();
-          widget.onDataChanged?.call();
-        }
-      },
-    ).animate().fadeIn(delay: (150 + i * 50).ms, duration: 250.ms).slideX(begin: 0.03, end: 0);
+    Widget recentTile(int i) =>
+        TransactionTile(
+              transaction: recent[i],
+              category: recent[i].categoryId == null
+                  ? null
+                  : data.categoriesById[recent[i].categoryId],
+              accountsById: {for (final a in data.accounts) a.id: a},
+              onTap: () async {
+                final t = recent[i];
+                final changed = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => TransactionDetailScreen(
+                      transaction: t,
+                      category: t.categoryId == null
+                          ? null
+                          : data.categoriesById[t.categoryId],
+                    ),
+                  ),
+                );
+                if (changed == true) {
+                  _reload();
+                  widget.onDataChanged?.call();
+                }
+              },
+            )
+            .animate()
+            .fadeIn(delay: (150 + i * 50).ms, duration: 250.ms)
+            .slideX(begin: 0.03, end: 0);
 
     final recentHeader = Text(
       'Recent',
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      style: Theme.of(context).textTheme.titleMedium
+          ?.copyWith(fontWeight: FontWeight.w600),
     );
 
     final recentBody = data.all.isEmpty
@@ -245,9 +259,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 12),
                 Text(
                   'Nothing recorded yet',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -257,7 +270,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           )
-        : Column(children: [for (var i = 0; i < recent.length; i++) recentTile(i)]);
+        : Column(
+            children: [for (var i = 0; i < recent.length; i++) recentTile(i)],
+          );
 
     final recentCard = Card(
       margin: EdgeInsets.zero,
@@ -266,6 +281,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: recentBody,
       ),
     );
+
+    final businessSummaryCard = widget.profile.type == ProfileType.business
+        ? BusinessSummaryCard(
+            allTransactions: data.all,
+            categoriesById: data.categoriesById,
+          )
+        : null;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -281,7 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     right: -60,
                     child: OrbitWatermark(
                       size: 200,
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+                      color: Theme.of(context).colorScheme.primary
+                          .withValues(alpha: 0.14),
                     ),
                   ),
                   balanceBlock,
@@ -291,12 +314,26 @@ class _HomeScreenState extends State<HomeScreen> {
               accountsRow,
               const SizedBox(height: 16),
               Row(
-                children: [
-                  Expanded(child: _StatCard(label: 'Income', amount: monthIncome)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _StatCard(label: 'Expense', amount: monthExpense)),
-                ],
-              ).animate().fadeIn(delay: 100.ms, duration: 350.ms).slideY(begin: 0.08, end: 0),
+                    children: [
+                      Expanded(
+                        child: _StatCard(label: 'Income', amount: monthIncome),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          label: 'Expense',
+                          amount: monthExpense,
+                        ),
+                      ),
+                    ],
+                  )
+                  .animate()
+                  .fadeIn(delay: 100.ms, duration: 350.ms)
+                  .slideY(begin: 0.08, end: 0),
+              if (businessSummaryCard != null) ...[
+                const SizedBox(height: 16),
+                businessSummaryCard,
+              ],
               const SizedBox(height: 24),
               recentHeader,
               const SizedBox(height: 8),
@@ -333,9 +370,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 right: -30,
                                 child: OrbitWatermark(
                                   size: 150,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withValues(alpha: 0.14),
+                                  color: Theme.of(context).colorScheme.primary
+                                      .withValues(alpha: 0.14),
                                 ),
                               ),
                               Column(
@@ -357,15 +393,29 @@ class _HomeScreenState extends State<HomeScreen> {
                       flex: 5,
                       child: Column(
                         children: [
-                          Expanded(child: _StatCard(label: 'Income', amount: monthIncome)),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Income',
+                              amount: monthIncome,
+                            ),
+                          ),
                           const SizedBox(height: 12),
-                          Expanded(child: _StatCard(label: 'Expense', amount: monthExpense)),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Expense',
+                              amount: monthExpense,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
               ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+              if (businessSummaryCard != null) ...[
+                const SizedBox(height: 16),
+                businessSummaryCard,
+              ],
               const SizedBox(height: 20),
               recentHeader,
               const SizedBox(height: 8),
@@ -373,7 +423,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: SingleChildScrollView(child: recentBody),
                   ),
                 ),

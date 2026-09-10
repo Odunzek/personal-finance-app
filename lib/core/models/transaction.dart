@@ -22,6 +22,7 @@ class Transaction {
   final TransactionKind type;
   final DateTime occurredAt;
   final String? note;
+  final int? recurringRuleId;
 
   const Transaction({
     required this.id,
@@ -33,9 +34,11 @@ class Transaction {
     required this.type,
     required this.occurredAt,
     this.note,
+    this.recurringRuleId,
   });
 
   bool get isTransfer => type == TransactionKind.transfer;
+  bool get isRecurring => recurringRuleId != null;
 
   factory Transaction.fromRow(Map<String, dynamic> row) {
     return Transaction(
@@ -48,6 +51,7 @@ class Transaction {
       type: TransactionKind.fromDb(row['type'] as String),
       occurredAt: DateTime.parse(row['occurred_at'] as String).toLocal(),
       note: row['note'] as String?,
+      recurringRuleId: row['recurring_rule_id'] as int?,
     );
   }
 }

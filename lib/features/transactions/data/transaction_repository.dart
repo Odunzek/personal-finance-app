@@ -21,6 +21,7 @@ abstract class TransactionRepository {
     required TransactionKind type,
     required DateTime occurredAt,
     String? note,
+    int? recurringRuleId,
   });
 
   /// Moves money from [fromAccountId] to [toAccountId] — e.g. paying a
@@ -108,6 +109,7 @@ class SupabaseTransactionRepository implements TransactionRepository {
     required TransactionKind type,
     required DateTime occurredAt,
     String? note,
+    int? recurringRuleId,
   }) async {
     final row = await supabase
         .from('transactions')
@@ -119,6 +121,7 @@ class SupabaseTransactionRepository implements TransactionRepository {
           'type': type.toDb(),
           'occurred_at': occurredAt.toUtc().toIso8601String(),
           'note': note,
+          'recurring_rule_id': recurringRuleId,
         })
         .select()
         .single();

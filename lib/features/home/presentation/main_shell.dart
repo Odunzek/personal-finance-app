@@ -3,10 +3,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/recurring/recurring_rule_runner.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../budgets/presentation/budgets_screen.dart';
+import '../../recurring/data/recurring_rule_repository.dart';
 import '../../settings/presentation/settings_screen.dart';
+import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/presentation/activity_screen.dart';
 import '../../transactions/presentation/quick_add_screen.dart';
 import '../../trends/presentation/trends_screen.dart';
@@ -15,12 +18,19 @@ import 'home_screen.dart';
 class MainShell extends StatefulWidget {
   final Profile profile;
   final AuthRepository authRepository;
+  final RecurringRuleRepository recurringRuleRepository;
+  final TransactionRepository transactionRepository;
 
-  const MainShell({
+  MainShell({
     super.key,
     required this.profile,
     required this.authRepository,
-  });
+    RecurringRuleRepository? recurringRuleRepository,
+    TransactionRepository? transactionRepository,
+  }) : recurringRuleRepository =
+           recurringRuleRepository ?? SupabaseRecurringRuleRepository(),
+       transactionRepository =
+           transactionRepository ?? SupabaseTransactionRepository();
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -29,6 +39,21 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
   int _refreshTick = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _catchUpRecurringRules();
+  }
+
+  Future<void> _catchUpRecurringRules() async {
+    final createdAny = await RecurringRuleRunner.catchUp(
+      recurringRuleRepository: widget.recurringRuleRepository,
+      transactionRepository: widget.transactionRepository,
+      profileId: widget.profile.id,
+    );
+    if (createdAny && mounted) setState(() => _refreshTick++);
+  }
 
   Future<void> _openQuickAdd() async {
     final saved = await Navigator.of(context).push<bool>(

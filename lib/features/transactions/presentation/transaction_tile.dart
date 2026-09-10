@@ -28,7 +28,8 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (transaction.isTransfer) {
-      final toName = accountsById?[transaction.transferAccountId]?.name ?? 'account';
+      final toName =
+          accountsById?[transaction.transferAccountId]?.name ?? 'account';
       final fromName = accountsById?[transaction.accountId]?.name ?? 'account';
       return ListTile(
         onTap: onTap,
@@ -70,12 +71,27 @@ class TransactionTile extends StatelessWidget {
         size: 40,
         iconSize: 18,
       ),
-      title: Text(
-        transaction.note?.isNotEmpty == true
-            ? transaction.note!
-            : (category?.name ?? 'Uncategorized'),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              transaction.note?.isNotEmpty == true
+                  ? transaction.note!
+                  : (category?.name ?? 'Uncategorized'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (transaction.isRecurring) ...[
+            const SizedBox(width: 6),
+            Icon(
+              LucideIcons.repeat,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ],
       ),
       subtitle: Text(
         [

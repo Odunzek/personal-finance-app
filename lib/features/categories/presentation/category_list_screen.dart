@@ -9,6 +9,7 @@ import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../data/category_repository.dart';
 import 'category_form_sheet.dart';
+import 'category_insights_screen.dart';
 import 'category_style_options.dart';
 
 class CategoryListScreen extends StatefulWidget {
@@ -171,6 +172,14 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                           category.type == CategoryType.income
                               ? 'Income'
                               : 'Expense',
+                        ),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => CategoryInsightsScreen(
+                              profile: widget.profile,
+                              category: category,
+                            ),
+                          ),
                         ),
                         trailing: PopupMenuButton<String>(
                           icon: const Icon(LucideIcons.moreVertical),

@@ -15,6 +15,7 @@ import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
+import '../../categories/presentation/category_insights_screen.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../../transactions/data/transaction_repository.dart';
 
@@ -379,53 +380,63 @@ class _TrendsScreenState extends State<TrendsScreen> {
                     final share = breakdownTotal == 0
                         ? 0.0
                         : entry.value / breakdownTotal;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              CategoryBadge(
-                                icon: iconForKey(entry.key.iconKey),
-                                color: Color(entry.key.colorArgb),
-                                size: 28,
-                                iconSize: 14,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(child: Text(entry.key.name)),
-                              Text(
-                                '${(share * 100).round()}%',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
+                    return InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => CategoryInsightsScreen(
+                            profile: widget.profile,
+                            category: entry.key,
+                          ),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CategoryBadge(
+                                  icon: iconForKey(entry.key.iconKey),
+                                  color: Color(entry.key.colorArgb),
+                                  size: 28,
+                                  iconSize: 14,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(entry.key.name)),
+                                Text(
+                                  '${(share * 100).round()}%',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
+                                ),
+                                const SizedBox(width: 10),
+                                MoneyText(entry.value, fontSize: 14),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0, end: share),
+                                duration: 500.ms,
+                                curve: Curves.easeOutCubic,
+                                builder: (context, value, _) =>
+                                    LinearProgressIndicator(
+                                      value: value,
+                                      minHeight: 6,
+                                      backgroundColor: Theme.of(context)
                                           .colorScheme
-                                          .onSurfaceVariant,
+                                          .surfaceContainerHighest,
+                                      color: Color(entry.key.colorArgb),
                                     ),
                               ),
-                              const SizedBox(width: 10),
-                              MoneyText(entry.value, fontSize: 14),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(3),
-                            child: TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0, end: share),
-                              duration: 500.ms,
-                              curve: Curves.easeOutCubic,
-                              builder: (context, value, _) =>
-                                  LinearProgressIndicator(
-                                    value: value,
-                                    minHeight: 6,
-                                    backgroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest,
-                                    color: Color(entry.key.colorArgb),
-                                  ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ).animate().fadeIn(
                       delay: (indexed.key * 50).ms,

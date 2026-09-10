@@ -23,6 +23,8 @@ import '../../budgets/data/budget_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_list_screen.dart';
 import '../../profiles/presentation/profile_list_screen.dart';
+import '../../recurring/data/recurring_rule_repository.dart';
+import '../../recurring/presentation/recurring_rule_list_screen.dart';
 import '../../transactions/data/transaction_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -32,6 +34,7 @@ class SettingsScreen extends StatefulWidget {
   final BudgetRepository budgetRepository;
   final CategoryRepository categoryRepository;
   final AccountRepository accountRepository;
+  final RecurringRuleRepository recurringRuleRepository;
 
   /// Called after returning from a screen that may have changed data other
   /// tabs depend on (categories, accounts), so the shell can refresh them.
@@ -46,11 +49,14 @@ class SettingsScreen extends StatefulWidget {
     BudgetRepository? budgetRepository,
     CategoryRepository? categoryRepository,
     AccountRepository? accountRepository,
+    RecurringRuleRepository? recurringRuleRepository,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
        budgetRepository = budgetRepository ?? SupabaseBudgetRepository(),
        categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
-       accountRepository = accountRepository ?? SupabaseAccountRepository();
+       accountRepository = accountRepository ?? SupabaseAccountRepository(),
+       recurringRuleRepository =
+           recurringRuleRepository ?? SupabaseRecurringRuleRepository();
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -202,6 +208,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await widget.transactionRepository.deleteAllForProfile(widget.profile.id);
       await widget.budgetRepository.deleteAllForProfile(widget.profile.id);
+      await widget.recurringRuleRepository.deleteAllForProfile(
+        widget.profile.id,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('All data cleared. Starting fresh.')),
@@ -257,6 +266,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     MaterialPageRoute(
                       builder: (_) =>
                           AccountListScreen(profile: widget.profile),
+                    ),
+                  );
+                  widget.onDataChanged?.call();
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(LucideIcons.repeat),
+                title: const Text('Recurring'),
+                subtitle: const Text(
+                  'Rent, salary, subscriptions on autopilot',
+                ),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          RecurringRuleListScreen(profile: widget.profile),
                     ),
                   );
                   widget.onDataChanged?.call();
