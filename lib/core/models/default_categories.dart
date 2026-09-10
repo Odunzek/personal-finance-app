@@ -67,3 +67,63 @@ const kDefaultCategorySeeds = [
     colorArgb: 0xFF23895F,
   ),
 ];
+
+/// Seeded into newly created business profiles instead of
+/// [kDefaultCategorySeeds] — everyday personal categories (groceries,
+/// dining) don't apply to running a business.
+const kDefaultBusinessCategorySeeds = [
+  DefaultCategorySeed(
+    name: 'Revenue',
+    type: CategoryType.income,
+    iconKey: 'revenue',
+    colorArgb: 0xFF23895F,
+  ),
+  DefaultCategorySeed(
+    name: 'Office Supplies',
+    type: CategoryType.expense,
+    iconKey: 'officeSupplies',
+    colorArgb: 0xFF4E8FD6,
+  ),
+  DefaultCategorySeed(
+    name: 'Software & Subscriptions',
+    type: CategoryType.expense,
+    iconKey: 'software',
+    colorArgb: 0xFF8B7BC7,
+  ),
+  DefaultCategorySeed(
+    name: 'Marketing & Advertising',
+    type: CategoryType.expense,
+    iconKey: 'marketing',
+    colorArgb: 0xFFE0654A,
+  ),
+  DefaultCategorySeed(
+    name: 'Payroll',
+    type: CategoryType.expense,
+    iconKey: 'payroll',
+    colorArgb: 0xFFD9932A,
+  ),
+  DefaultCategorySeed(
+    name: 'Equipment',
+    type: CategoryType.expense,
+    iconKey: 'equipment',
+    colorArgb: 0xFF5CA2AC,
+  ),
+  DefaultCategorySeed(
+    name: 'Travel',
+    type: CategoryType.expense,
+    iconKey: 'travel',
+    colorArgb: 0xFFC56FA0,
+  ),
+  DefaultCategorySeed(
+    name: 'Professional Services',
+    type: CategoryType.expense,
+    iconKey: 'professionalServices',
+    colorArgb: 0xFF34A874,
+  ),
+  DefaultCategorySeed(
+    name: 'Taxes',
+    type: CategoryType.expense,
+    iconKey: 'taxes',
+    colorArgb: 0xFFB8A24A,
+  ),
+];

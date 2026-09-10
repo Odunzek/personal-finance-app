@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/models/profile.dart';
+
 class ProfileFormResult {
   final String displayName;
   final String currencyCode;
+  final ProfileType type;
 
   const ProfileFormResult({
     required this.displayName,
     required this.currencyCode,
+    required this.type,
   });
 }
 
@@ -40,6 +44,7 @@ class _ProfileFormSheet extends StatefulWidget {
 class _ProfileFormSheetState extends State<_ProfileFormSheet> {
   late final TextEditingController _nameController;
   late String _currency;
+  ProfileType _type = ProfileType.personal;
 
   @override
   void initState() {
@@ -57,9 +62,13 @@ class _ProfileFormSheetState extends State<_ProfileFormSheet> {
   void _submit() {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
-    Navigator.of(
-      context,
-    ).pop(ProfileFormResult(displayName: name, currencyCode: _currency));
+    Navigator.of(context).pop(
+      ProfileFormResult(
+        displayName: name,
+        currencyCode: _currency,
+        type: _type,
+      ),
+    );
   }
 
   @override
@@ -77,9 +86,8 @@ class _ProfileFormSheetState extends State<_ProfileFormSheet> {
         children: [
           Text(
             widget.initialName == null ? 'New profile' : 'Rename profile',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -96,6 +104,32 @@ class _ProfileFormSheetState extends State<_ProfileFormSheet> {
                 .toList(),
             onChanged: (value) => setState(() => _currency = value!),
           ),
+          if (widget.initialName == null) ...[
+            const SizedBox(height: 16),
+            Text('Type', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            SegmentedButton<ProfileType>(
+              segments: const [
+                ButtonSegment(
+                  value: ProfileType.personal,
+                  label: Text('Personal'),
+                ),
+                ButtonSegment(
+                  value: ProfileType.business,
+                  label: Text('Business'),
+                ),
+              ],
+              selected: {_type},
+              onSelectionChanged: (s) => setState(() => _type = s.first),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _type == ProfileType.business
+                  ? 'Seeded with business categories like Revenue, Payroll, and Software.'
+                  : 'Seeded with everyday categories like Groceries and Dining.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _submit,

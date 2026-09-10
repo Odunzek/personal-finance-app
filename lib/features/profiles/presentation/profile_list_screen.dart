@@ -61,8 +61,12 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
     final created = await widget.profileRepository.createProfile(
       displayName: result.displayName,
       currencyCode: result.currencyCode,
+      type: result.type,
     );
-    for (final seed in kDefaultCategorySeeds) {
+    final seeds = result.type == ProfileType.business
+        ? kDefaultBusinessCategorySeeds
+        : kDefaultCategorySeeds;
+    for (final seed in seeds) {
       await widget.categoryRepository.createCategory(
         profileId: created.id,
         name: seed.name,
@@ -228,12 +232,18 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
                               borderRadius: BorderRadius.circular(11),
                             ),
                             child: Icon(
-                              LucideIcons.user,
+                              profile.type == ProfileType.business
+                                  ? LucideIcons.briefcase
+                                  : LucideIcons.user,
                               color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           title: Text(profile.displayName),
-                          subtitle: Text(profile.currencyCode),
+                          subtitle: Text(
+                            profile.type == ProfileType.business
+                                ? '${profile.currencyCode} · Business'
+                                : profile.currencyCode,
+                          ),
                           onTap: () => _openProfile(profile),
                           trailing: PopupMenuButton<String>(
                             icon: const Icon(LucideIcons.moreVertical),

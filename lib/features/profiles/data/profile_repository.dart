@@ -6,6 +6,7 @@ abstract class ProfileRepository {
   Future<Profile> createProfile({
     required String displayName,
     required String currencyCode,
+    ProfileType type = ProfileType.personal,
   });
   Future<void> renameProfile(int id, String displayName);
   Future<void> deleteProfile(int id);
@@ -24,6 +25,7 @@ class SupabaseProfileRepository implements ProfileRepository {
   Future<Profile> createProfile({
     required String displayName,
     required String currencyCode,
+    ProfileType type = ProfileType.personal,
   }) async {
     final userId = supabase.auth.currentUser!.id;
     final row = await supabase
@@ -32,6 +34,7 @@ class SupabaseProfileRepository implements ProfileRepository {
           'owner_user_id': userId,
           'display_name': displayName,
           'currency_code': currencyCode,
+          'profile_type': type.toDb(),
         })
         .select()
         .single();

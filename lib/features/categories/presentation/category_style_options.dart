@@ -14,9 +14,19 @@ const Map<String, IconData> kCategoryIcons = {
   'health': LucideIcons.heart,
   'income': LucideIcons.wallet,
   'other': LucideIcons.moreHorizontal,
+  'revenue': LucideIcons.trendingUp,
+  'officeSupplies': LucideIcons.briefcase,
+  'software': LucideIcons.laptop,
+  'marketing': LucideIcons.megaphone,
+  'payroll': LucideIcons.users,
+  'equipment': LucideIcons.wrench,
+  'travel': LucideIcons.plane,
+  'professionalServices': LucideIcons.scale,
+  'taxes': LucideIcons.receipt,
 };
 
-IconData iconForKey(String key) => kCategoryIcons[key] ?? LucideIcons.moreHorizontal;
+IconData iconForKey(String key) =>
+    kCategoryIcons[key] ?? LucideIcons.moreHorizontal;
 
 const List<Color> kCategoryColors = [
   Color(0xFF5CA2AC), // brand teal

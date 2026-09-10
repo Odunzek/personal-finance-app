@@ -19,10 +19,16 @@ class _FakeAuthRepository implements AuthRepository {
   User? get currentUser => null;
 
   @override
-  Future<void> signIn({required String email, required String password}) async {}
+  Future<void> signIn({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
-  Future<void> signUp({required String email, required String password}) async {}
+  Future<void> signUp({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -41,12 +47,14 @@ class _FakeProfileRepository implements ProfileRepository {
   Future<Profile> createProfile({
     required String displayName,
     required String currencyCode,
+    ProfileType type = ProfileType.personal,
   }) async {
     final profile = Profile(
       id: nextId++,
       displayName: displayName,
       currencyCode: currencyCode,
       sortOrder: 0,
+      type: type,
     );
     profiles.add(profile);
     return profile;
@@ -161,7 +169,12 @@ void main() {
     // on this screen (only the very first profile ever auto-continues into
     // the main app shell).
     final repo = _FakeProfileRepository([
-      const Profile(id: 1, displayName: 'Existing', currencyCode: 'CAD', sortOrder: 0),
+      const Profile(
+        id: 1,
+        displayName: 'Existing',
+        currencyCode: 'CAD',
+        sortOrder: 0,
+      ),
     ]);
     await tester.pumpWidget(
       MaterialApp(
