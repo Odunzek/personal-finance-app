@@ -19,12 +19,12 @@ const Map<String, IconData> kCategoryIcons = {
 IconData iconForKey(String key) => kCategoryIcons[key] ?? LucideIcons.moreHorizontal;
 
 const List<Color> kCategoryColors = [
-  Color(0xFF5CA2AC),
-  Color(0xFF2F8F6B),
-  Color(0xFFC98A16),
-  Color(0xFFA93B1F),
-  Color(0xFF6B5CA0),
-  Color(0xFF3B6EA9),
-  Color(0xFFA05C8A),
-  Color(0xFF8A8A5C),
+  Color(0xFF5CA2AC), // brand teal
+  Color(0xFF34A874), // green
+  Color(0xFFD9932A), // amber
+  Color(0xFFE0654A), // coral
+  Color(0xFF8B7BC7), // violet
+  Color(0xFF4E8FD6), // sky blue
+  Color(0xFFC56FA0), // rose
+  Color(0xFFB8A24A), // gold
 ];

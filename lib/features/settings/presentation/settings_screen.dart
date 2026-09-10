@@ -5,18 +5,74 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../budgets/data/budget_repository.dart';
 import '../../categories/presentation/category_list_screen.dart';
 import '../../profiles/presentation/profile_list_screen.dart';
+import '../../transactions/data/transaction_repository.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   final Profile profile;
   final AuthRepository authRepository;
+  final TransactionRepository transactionRepository;
+  final BudgetRepository budgetRepository;
 
-  const SettingsScreen({
+  SettingsScreen({
     super.key,
     required this.profile,
     required this.authRepository,
-  });
+    TransactionRepository? transactionRepository,
+    BudgetRepository? budgetRepository,
+  }) : transactionRepository =
+           transactionRepository ?? SupabaseTransactionRepository(),
+       budgetRepository = budgetRepository ?? SupabaseBudgetRepository();
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _resetting = false;
+
+  Future<void> _confirmResetData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset data?'),
+        content: Text(
+          'This permanently deletes every transaction, budget, and savings '
+          'target for "${widget.profile.displayName}". Your categories and '
+          'profile stay in place, so you can start fresh right away. This '
+          'cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Reset data'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _resetting = true);
+    try {
+      await widget.transactionRepository.deleteAllForProfile(widget.profile.id);
+      await widget.budgetRepository.deleteAllForProfile(widget.profile.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All data cleared. Starting fresh.')),
+      );
+    } finally {
+      if (mounted) setState(() => _resetting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,11 +88,12 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 leading: const Icon(LucideIcons.users),
                 title: const Text('Profiles'),
-                trailing: Text(profile.displayName),
+                trailing: Text(widget.profile.displayName),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        ProfileListScreen(authRepository: authRepository),
+                    builder: (_) => ProfileListScreen(
+                      authRepository: widget.authRepository,
+                    ),
                   ),
                 ),
               ),
@@ -46,7 +103,7 @@ class SettingsScreen extends StatelessWidget {
                 title: const Text('Categories'),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => CategoryListScreen(profile: profile),
+                    builder: (_) => CategoryListScreen(profile: widget.profile),
                   ),
                 ),
               ),
@@ -90,12 +147,32 @@ class SettingsScreen extends StatelessWidget {
         Card(
           margin: EdgeInsets.zero,
           child: ListTile(
+            leading: _resetting
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    LucideIcons.rotateCcw,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            title: const Text('Reset data'),
+            subtitle: const Text('Clear all transactions, budgets, and goals'),
+            textColor: Theme.of(context).colorScheme.error,
+            onTap: _resetting ? null : _confirmResetData,
+          ),
+        ).animate().fadeIn(delay: 80.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
+        const SizedBox(height: 16),
+        Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
             leading: Icon(LucideIcons.logOut, color: Theme.of(context).colorScheme.error),
             title: const Text('Sign out'),
             textColor: Theme.of(context).colorScheme.error,
-            onTap: authRepository.signOut,
+            onTap: widget.authRepository.signOut,
           ),
-        ).animate().fadeIn(delay: 80.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
+        ).animate().fadeIn(delay: 120.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
       ],
     );
   }

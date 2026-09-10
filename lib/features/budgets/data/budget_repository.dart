@@ -20,6 +20,10 @@ abstract class BudgetRepository {
     required DateTime month,
     required int targetMinorUnits,
   });
+
+  /// Permanently deletes every budget and savings target for a profile —
+  /// used by the Settings "Reset data" action.
+  Future<void> deleteAllForProfile(int profileId);
 }
 
 class SupabaseBudgetRepository implements BudgetRepository {
@@ -91,5 +95,11 @@ class SupabaseBudgetRepository implements BudgetRepository {
         .select()
         .single();
     return SavingsTarget.fromRow(row);
+  }
+
+  @override
+  Future<void> deleteAllForProfile(int profileId) async {
+    await supabase.from('budgets').delete().eq('profile_id', profileId);
+    await supabase.from('savings_targets').delete().eq('profile_id', profileId);
   }
 }

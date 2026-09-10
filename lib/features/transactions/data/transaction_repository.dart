@@ -30,6 +30,11 @@ abstract class TransactionRepository {
   });
 
   Future<void> deleteTransaction(int id);
+
+  /// Permanently deletes every transaction for a profile — used by the
+  /// Settings "Reset data" action. Categories and the profile itself are
+  /// untouched.
+  Future<void> deleteAllForProfile(int profileId);
 }
 
 class SupabaseTransactionRepository implements TransactionRepository {
@@ -121,5 +126,10 @@ class SupabaseTransactionRepository implements TransactionRepository {
   @override
   Future<void> deleteTransaction(int id) async {
     await supabase.from('transactions').delete().eq('id', id);
+  }
+
+  @override
+  Future<void> deleteAllForProfile(int profileId) async {
+    await supabase.from('transactions').delete().eq('profile_id', profileId);
   }
 }
