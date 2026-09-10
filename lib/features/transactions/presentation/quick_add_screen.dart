@@ -3,10 +3,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/layout/breakpoints.dart';
+import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/models/transaction.dart' show TransactionKind;
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
+import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
@@ -15,15 +18,18 @@ class QuickAddScreen extends StatefulWidget {
   final Profile profile;
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
+  final AccountRepository accountRepository;
 
   QuickAddScreen({
     super.key,
     required this.profile,
     TransactionRepository? transactionRepository,
     CategoryRepository? categoryRepository,
+    AccountRepository? accountRepository,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
-       categoryRepository = categoryRepository ?? SupabaseCategoryRepository();
+       categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
+       accountRepository = accountRepository ?? SupabaseAccountRepository();
 
   @override
   State<QuickAddScreen> createState() => _QuickAddScreenState();
@@ -32,11 +38,14 @@ class QuickAddScreen extends StatefulWidget {
 class _QuickAddScreenState extends State<QuickAddScreen> {
   final _noteController = TextEditingController();
   String _amount = '0';
-  CategoryType _type = CategoryType.expense;
+  TransactionKind _kind = TransactionKind.expense;
   Category? _selectedCategory;
+  Account? _selectedAccount;
+  Account? _selectedToAccount;
   bool _saving = false;
 
   late Future<List<Category>> _categoriesFuture;
+  late Future<List<Account>> _accountsFuture;
 
   @override
   void initState() {
@@ -44,6 +53,16 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
     _categoriesFuture = widget.categoryRepository.listActiveCategories(
       widget.profile.id,
     );
+    _accountsFuture = widget.accountRepository.listActiveAccounts(
+      widget.profile.id,
+    );
+    _accountsFuture.then((accounts) {
+      if (!mounted || accounts.isEmpty) return;
+      setState(() {
+        _selectedAccount = accounts.first;
+        if (accounts.length > 1) _selectedToAccount = accounts[1];
+      });
+    });
   }
 
   @override
@@ -69,28 +88,48 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
 
   int get _amountMinorUnits => ((double.tryParse(_amount) ?? 0) * 100).round();
 
+  bool get _canSave {
+    if (_amountMinorUnits <= 0 || _saving) return false;
+    if (_kind == TransactionKind.transfer) {
+      return _selectedAccount != null &&
+          _selectedToAccount != null &&
+          _selectedAccount!.id != _selectedToAccount!.id;
+    }
+    return _selectedAccount != null && _selectedCategory != null;
+  }
+
   Future<void> _save() async {
-    if (_amountMinorUnits <= 0 || _selectedCategory == null || _saving) return;
+    if (!_canSave) return;
     setState(() => _saving = true);
     try {
-      await widget.transactionRepository.createTransaction(
-        profileId: widget.profile.id,
-        categoryId: _selectedCategory!.id,
-        amountMinorUnits: _amountMinorUnits,
-        type: _type,
-        occurredAt: DateTime.now(),
-        note: _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
-      );
+      final note = _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim();
+      if (_kind == TransactionKind.transfer) {
+        await widget.transactionRepository.createTransfer(
+          profileId: widget.profile.id,
+          fromAccountId: _selectedAccount!.id,
+          toAccountId: _selectedToAccount!.id,
+          amountMinorUnits: _amountMinorUnits,
+          occurredAt: DateTime.now(),
+          note: note,
+        );
+      } else {
+        await widget.transactionRepository.createTransaction(
+          profileId: widget.profile.id,
+          accountId: _selectedAccount!.id,
+          categoryId: _selectedCategory!.id,
+          amountMinorUnits: _amountMinorUnits,
+          type: _kind,
+          occurredAt: DateTime.now(),
+          note: note,
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
-
-  bool get _canSave =>
-      _amountMinorUnits > 0 && _selectedCategory != null && !_saving;
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +162,25 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final content = _FormContent(
+              amount: _amount,
+              kind: _kind,
+              noteController: _noteController,
+              categoriesFuture: _categoriesFuture,
+              accountsFuture: _accountsFuture,
+              selectedCategory: _selectedCategory,
+              selectedAccount: _selectedAccount,
+              selectedToAccount: _selectedToAccount,
+              onKindChanged: (k) => setState(() {
+                _kind = k;
+                _selectedCategory = null;
+              }),
+              onCategorySelected: (c) => setState(() => _selectedCategory = c),
+              onAccountSelected: (a) => setState(() => _selectedAccount = a),
+              onToAccountSelected: (a) => setState(() => _selectedToAccount = a),
+              amountSize: constraints.maxWidth >= kTabletBreakpoint ? 64 : 44,
+            );
+
             if (constraints.maxWidth >= kTabletBreakpoint) {
               return Row(
                 children: [
@@ -130,20 +188,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                     flex: 3,
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(32),
-                      child: _FormContent(
-                        amount: _amount,
-                        type: _type,
-                        noteController: _noteController,
-                        categoriesFuture: _categoriesFuture,
-                        selectedCategory: _selectedCategory,
-                        onTypeChanged: (t) => setState(() {
-                          _type = t;
-                          _selectedCategory = null;
-                        }),
-                        onCategorySelected: (c) =>
-                            setState(() => _selectedCategory = c),
-                        amountSize: 64,
-                      ),
+                      child: content,
                     ),
                   ),
                   Container(
@@ -168,20 +213,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _FormContent(
-                      amount: _amount,
-                      type: _type,
-                      noteController: _noteController,
-                      categoriesFuture: _categoriesFuture,
-                      selectedCategory: _selectedCategory,
-                      onTypeChanged: (t) => setState(() {
-                        _type = t;
-                        _selectedCategory = null;
-                      }),
-                      onCategorySelected: (c) =>
-                          setState(() => _selectedCategory = c),
-                      amountSize: 44,
-                    ),
+                    child: content,
                   ),
                 ),
                 Padding(
@@ -202,27 +234,42 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
 
 class _FormContent extends StatelessWidget {
   final String amount;
-  final CategoryType type;
+  final TransactionKind kind;
   final TextEditingController noteController;
   final Future<List<Category>> categoriesFuture;
+  final Future<List<Account>> accountsFuture;
   final Category? selectedCategory;
-  final ValueChanged<CategoryType> onTypeChanged;
+  final Account? selectedAccount;
+  final Account? selectedToAccount;
+  final ValueChanged<TransactionKind> onKindChanged;
   final ValueChanged<Category> onCategorySelected;
+  final ValueChanged<Account> onAccountSelected;
+  final ValueChanged<Account> onToAccountSelected;
   final double amountSize;
 
   const _FormContent({
     required this.amount,
-    required this.type,
+    required this.kind,
     required this.noteController,
     required this.categoriesFuture,
+    required this.accountsFuture,
     required this.selectedCategory,
-    required this.onTypeChanged,
+    required this.selectedAccount,
+    required this.selectedToAccount,
+    required this.onKindChanged,
     required this.onCategorySelected,
+    required this.onAccountSelected,
+    required this.onToAccountSelected,
     required this.amountSize,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isTransfer = kind == TransactionKind.transfer;
+    final categoryType = kind == TransactionKind.income
+        ? CategoryType.income
+        : CategoryType.expense;
+
     return Column(
       children: [
         const SizedBox(height: 16),
@@ -232,97 +279,172 @@ class _FormContent extends StatelessWidget {
           style: MoneyText.style(context, fontSize: amountSize),
         ),
         const SizedBox(height: 16),
-        SegmentedButton<CategoryType>(
+        SegmentedButton<TransactionKind>(
           segments: const [
-            ButtonSegment(value: CategoryType.expense, label: Text('Expense')),
-            ButtonSegment(value: CategoryType.income, label: Text('Income')),
+            ButtonSegment(value: TransactionKind.expense, label: Text('Expense')),
+            ButtonSegment(value: TransactionKind.income, label: Text('Income')),
+            ButtonSegment(value: TransactionKind.transfer, label: Text('Transfer')),
           ],
-          selected: {type},
-          onSelectionChanged: (s) => onTypeChanged(s.first),
+          selected: {kind},
+          onSelectionChanged: (s) => onKindChanged(s.first),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: noteController,
           textAlign: TextAlign.center,
-          decoration: const InputDecoration(
-            hintText: 'What was it for?',
+          decoration: InputDecoration(
+            hintText: isTransfer ? 'Note (optional)' : 'What was it for?',
             border: InputBorder.none,
           ),
         ),
         const SizedBox(height: 12),
-        FutureBuilder<List<Category>>(
-          future: categoriesFuture,
+        FutureBuilder<List<Account>>(
+          future: accountsFuture,
           builder: (context, snapshot) {
-            final categories = (snapshot.data ?? [])
-                .where((c) => c.type == type)
-                .toList();
-            if (categories.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('No categories yet — add one in Settings.'),
+            final accounts = snapshot.data ?? [];
+            if (accounts.isEmpty) return const SizedBox.shrink();
+            if (isTransfer) {
+              return Column(
+                children: [
+                  _AccountPicker(
+                    label: 'From',
+                    accounts: accounts,
+                    selected: selectedAccount,
+                    onSelected: onAccountSelected,
+                  ),
+                  const SizedBox(height: 12),
+                  _AccountPicker(
+                    label: 'To',
+                    accounts: accounts.where((a) => a.id != selectedAccount?.id).toList(),
+                    selected: selectedToAccount,
+                    onSelected: onToAccountSelected,
+                  ),
+                  const SizedBox(height: 12),
+                ],
               );
             }
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 88,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.82,
+            if (accounts.length < 2) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _AccountPicker(
+                label: 'Account',
+                accounts: accounts,
+                selected: selectedAccount,
+                onSelected: onAccountSelected,
               ),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final c = categories[index];
-                final selected = c.id == selectedCategory?.id;
-                return GestureDetector(
-                  onTap: () => onCategorySelected(c),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedScale(
-                        scale: selected ? 1.08 : 1.0,
-                        duration: 180.ms,
-                        curve: Curves.easeOut,
-                        child: AnimatedContainer(
-                          duration: 180.ms,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: selected
-                                ? Border.all(
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                    width: 3,
-                                  )
-                                : null,
-                          ),
-                          padding: EdgeInsets.all(selected ? 3 : 0),
-                          child: CategoryBadge(
-                            icon: iconForKey(c.iconKey),
-                            color: Color(c.colorArgb),
-                            size: 56,
-                            iconSize: 24,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        c.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: selected ? FontWeight.w600 : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(
-                  delay: (index * 30).ms,
-                  duration: 200.ms,
-                ).scale(begin: const Offset(0.9, 0.9));
-              },
             );
           },
+        ),
+        if (!isTransfer)
+          FutureBuilder<List<Category>>(
+            future: categoriesFuture,
+            builder: (context, snapshot) {
+              final categories = (snapshot.data ?? [])
+                  .where((c) => c.type == categoryType)
+                  .toList();
+              if (categories.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text('No categories yet — add one in Settings.'),
+                );
+              }
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 88,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.82,
+                ),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final c = categories[index];
+                  final selected = c.id == selectedCategory?.id;
+                  return GestureDetector(
+                    onTap: () => onCategorySelected(c),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedScale(
+                          scale: selected ? 1.08 : 1.0,
+                          duration: 180.ms,
+                          curve: Curves.easeOut,
+                          child: AnimatedContainer(
+                            duration: 180.ms,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: selected
+                                  ? Border.all(
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                      width: 3,
+                                    )
+                                  : null,
+                            ),
+                            padding: EdgeInsets.all(selected ? 3 : 0),
+                            child: CategoryBadge(
+                              icon: iconForKey(c.iconKey),
+                              color: Color(c.colorArgb),
+                              size: 56,
+                              iconSize: 24,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          c.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: selected ? FontWeight.w600 : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ).animate().fadeIn(
+                    delay: (index * 30).ms,
+                    duration: 200.ms,
+                  ).scale(begin: const Offset(0.9, 0.9));
+                },
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _AccountPicker extends StatelessWidget {
+  final String label;
+  final List<Account> accounts;
+  final Account? selected;
+  final ValueChanged<Account> onSelected;
+
+  const _AccountPicker({
+    required this.label,
+    required this.accounts,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: accounts.map((a) {
+            return ChoiceChip(
+              label: Text(a.name),
+              selected: a.id == selected?.id,
+              onSelected: (_) => onSelected(a),
+            );
+          }).toList(),
         ),
       ],
     );

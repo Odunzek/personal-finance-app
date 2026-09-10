@@ -3,11 +3,14 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/layout/breakpoints.dart';
+import '../../../core/models/account.dart';
+import '../../../core/models/account_balance.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/orbit_watermark.dart';
+import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/presentation/transaction_detail_screen.dart';
@@ -16,14 +19,16 @@ import '../../transactions/presentation/transaction_tile.dart';
 class HomeData {
   final List<model.Transaction> all;
   final Map<int, Category> categoriesById;
+  final List<Account> accounts;
 
-  const HomeData(this.all, this.categoriesById);
+  const HomeData(this.all, this.categoriesById, this.accounts);
 }
 
 class HomeScreen extends StatefulWidget {
   final Profile profile;
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
+  final AccountRepository accountRepository;
   final VoidCallback? onDataChanged;
 
   HomeScreen({
@@ -31,10 +36,12 @@ class HomeScreen extends StatefulWidget {
     required this.profile,
     TransactionRepository? transactionRepository,
     CategoryRepository? categoryRepository,
+    AccountRepository? accountRepository,
     this.onDataChanged,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
-       categoryRepository = categoryRepository ?? SupabaseCategoryRepository();
+       categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
+       accountRepository = accountRepository ?? SupabaseAccountRepository();
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -57,12 +64,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final results = await Future.wait([
       widget.transactionRepository.listTransactions(widget.profile.id),
       widget.categoryRepository.listActiveCategories(widget.profile.id),
+      widget.accountRepository.listActiveAccounts(widget.profile.id),
     ]);
     final transactions = results[0] as List<model.Transaction>;
     final categories = results[1] as List<Category>;
+    final accounts = results[2] as List<Account>;
     return HomeData(
       transactions,
       {for (final c in categories) c.id: c},
+      accounts,
     );
   }
 
@@ -81,65 +91,9 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final data = snapshot.data!;
-          if (data.all.isEmpty) {
-            return _buildEmpty(context);
-          }
-          return _buildContent(context, data);
+          return _buildContent(context, snapshot.data!);
         },
       ),
-    );
-  }
-
-  Widget _buildEmpty(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(32),
-      children: [
-        const SizedBox(height: 60),
-        Text(
-          widget.profile.displayName.toUpperCase(),
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-            letterSpacing: 1.6,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text('Total balance', style: Theme.of(context).textTheme.bodyMedium),
-        const MoneyText(0, fontSize: 46),
-        const SizedBox(height: 32),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              style: BorderStyle.solid,
-            ),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                LucideIcons.walletMinimal,
-                size: 40,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Nothing recorded yet',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Add your first transaction to get started.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ).animate().fadeIn(duration: 300.ms).scale(begin: const Offset(0.95, 0.95)),
-      ],
     );
   }
 
@@ -148,17 +102,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final monthStart = DateTime(now.year, now.month, 1);
     final weekAgo = now.subtract(const Duration(days: 7));
 
-    var balance = 0;
+    final netWorth = data.accounts.fold<int>(
+      0,
+      (sum, a) => sum + computeAccountBalance(a, data.all),
+    );
+
     var monthIncome = 0;
     var monthExpense = 0;
     var weekNet = 0;
     for (final t in data.all) {
-      final signed = t.type == CategoryType.income
+      if (t.isTransfer) continue;
+      final signed = t.type == model.TransactionKind.income
           ? t.amountMinorUnits
           : -t.amountMinorUnits;
-      balance += signed;
       if (!t.occurredAt.isBefore(monthStart)) {
-        if (t.type == CategoryType.income) {
+        if (t.type == model.TransactionKind.income) {
           monthIncome += t.amountMinorUnits;
         } else {
           monthExpense += t.amountMinorUnits;
@@ -182,8 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Text('Total balance', style: Theme.of(context).textTheme.bodyMedium),
-        AnimatedMoneyText(balance, fontSize: 46),
+        Text('Net worth', style: Theme.of(context).textTheme.bodyMedium),
+        AnimatedMoneyText(netWorth, fontSize: 46),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -209,16 +167,56 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
 
+    final accountsRow = data.accounts.isEmpty
+        ? const SizedBox.shrink()
+        : SizedBox(
+            height: 64,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: data.accounts.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final account = data.accounts[i];
+                final balance = computeAccountBalance(account, data.all);
+                final isLiability = account.type == AccountType.liability;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(account.name, style: Theme.of(context).textTheme.bodySmall),
+                      MoneyText(
+                        isLiability ? -balance : balance,
+                        fontSize: 15,
+                        color: isLiability
+                            ? Theme.of(context).colorScheme.error
+                            : null,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+
     Widget recentTile(int i) => TransactionTile(
       transaction: recent[i],
-      category: data.categoriesById[recent[i].categoryId],
+      category: recent[i].categoryId == null
+          ? null
+          : data.categoriesById[recent[i].categoryId],
+      accountsById: {for (final a in data.accounts) a.id: a},
       onTap: () async {
         final t = recent[i];
         final changed = await Navigator.of(context).push<bool>(
           MaterialPageRoute(
             builder: (_) => TransactionDetailScreen(
               transaction: t,
-              category: data.categoriesById[t.categoryId],
+              category: t.categoryId == null ? null : data.categoriesById[t.categoryId],
             ),
           ),
         );
@@ -234,11 +232,38 @@ class _HomeScreenState extends State<HomeScreen> {
       style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
     );
 
+    final recentBody = data.all.isEmpty
+        ? Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Column(
+              children: [
+                Icon(
+                  LucideIcons.walletMinimal,
+                  size: 36,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Nothing recorded yet',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Add your first transaction to get started.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        : Column(children: [for (var i = 0; i < recent.length; i++) recentTile(i)]);
+
     final recentCard = Card(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Column(children: [for (var i = 0; i < recent.length; i++) recentTile(i)]),
+        child: recentBody,
       ),
     );
 
@@ -262,7 +287,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   balanceBlock,
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              accountsRow,
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(child: _StatCard(label: 'Income', amount: monthIncome)),
@@ -311,7 +338,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ).colorScheme.primary.withValues(alpha: 0.14),
                                 ),
                               ),
-                              balanceBlock,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  balanceBlock,
+                                  const SizedBox(height: 16),
+                                  accountsRow,
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -339,11 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   margin: EdgeInsets.zero,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [for (var i = 0; i < recent.length; i++) recentTile(i)],
-                      ),
-                    ),
+                    child: SingleChildScrollView(child: recentBody),
                   ),
                 ),
               ),

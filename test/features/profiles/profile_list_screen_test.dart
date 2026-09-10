@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:finance_app/core/models/account.dart';
 import 'package:finance_app/core/models/category.dart';
 import 'package:finance_app/core/models/profile.dart';
+import 'package:finance_app/features/accounts/data/account_repository.dart';
 import 'package:finance_app/features/auth/data/auth_repository.dart';
 import 'package:finance_app/features/categories/data/category_repository.dart';
 import 'package:finance_app/features/profiles/data/profile_repository.dart';
@@ -99,6 +101,41 @@ class _FakeCategoryRepository implements CategoryRepository {
   Future<void> deactivateCategory(int id) async {}
 }
 
+class _FakeAccountRepository implements AccountRepository {
+  final List<Account> created = [];
+  int nextId = 1;
+
+  @override
+  Future<List<Account>> listActiveAccounts(int profileId) async =>
+      created.where((a) => a.profileId == profileId).toList();
+
+  @override
+  Future<Account> createAccount({
+    required int profileId,
+    required String name,
+    required AccountType type,
+    required int startingBalanceMinorUnits,
+  }) async {
+    final account = Account(
+      id: nextId++,
+      profileId: profileId,
+      name: name,
+      type: type,
+      startingBalanceMinorUnits: startingBalanceMinorUnits,
+      isActive: true,
+      sortOrder: 0,
+    );
+    created.add(account);
+    return account;
+  }
+
+  @override
+  Future<void> renameAccount(int id, String name) async {}
+
+  @override
+  Future<void> deactivateAccount(int id) async {}
+}
+
 void main() {
   testWidgets('shows empty state with no profiles', (tester) async {
     final repo = _FakeProfileRepository();
@@ -108,6 +145,7 @@ void main() {
           authRepository: _FakeAuthRepository(),
           profileRepository: repo,
           categoryRepository: _FakeCategoryRepository(),
+          accountRepository: _FakeAccountRepository(),
         ),
       ),
     );
@@ -131,6 +169,7 @@ void main() {
           authRepository: _FakeAuthRepository(),
           profileRepository: repo,
           categoryRepository: _FakeCategoryRepository(),
+          accountRepository: _FakeAccountRepository(),
         ),
       ),
     );

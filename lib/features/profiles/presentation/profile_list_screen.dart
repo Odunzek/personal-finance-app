@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/models/account.dart';
 import '../../../core/models/default_categories.dart';
 import '../../../core/models/profile.dart';
+import '../../accounts/data/account_repository.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../home/presentation/main_shell.dart';
@@ -14,6 +16,7 @@ class ProfileListScreen extends StatefulWidget {
   final AuthRepository authRepository;
   final ProfileRepository profileRepository;
   final CategoryRepository categoryRepository;
+  final AccountRepository accountRepository;
 
   /// Auto-enter the profile without showing the list when there's exactly
   /// one. Only appropriate for the initial post-sign-in gate — when this
@@ -27,8 +30,10 @@ class ProfileListScreen extends StatefulWidget {
     this.autoSelectSingle = false,
     ProfileRepository? profileRepository,
     CategoryRepository? categoryRepository,
+    AccountRepository? accountRepository,
   }) : profileRepository = profileRepository ?? SupabaseProfileRepository(),
-       categoryRepository = categoryRepository ?? SupabaseCategoryRepository();
+       categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
+       accountRepository = accountRepository ?? SupabaseAccountRepository();
 
   @override
   State<ProfileListScreen> createState() => _ProfileListScreenState();
@@ -65,6 +70,12 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
         iconKey: seed.iconKey,
       );
     }
+    await widget.accountRepository.createAccount(
+      profileId: created.id,
+      name: 'Cash',
+      type: AccountType.asset,
+      startingBalanceMinorUnits: 0,
+    );
     if (isFirstProfile) {
       _openProfile(created);
       return;

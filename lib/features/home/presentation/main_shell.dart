@@ -39,6 +39,8 @@ class _MainShellState extends State<MainShell> {
     if (saved == true) setState(() => _refreshTick++);
   }
 
+  void _bumpRefresh() => setState(() => _refreshTick++);
+
   @override
   Widget build(BuildContext context) {
     final tabs = [
@@ -61,6 +63,7 @@ class _MainShellState extends State<MainShell> {
       SettingsScreen(
         profile: widget.profile,
         authRepository: widget.authRepository,
+        onDataChanged: _bumpRefresh,
       ),
     ];
 

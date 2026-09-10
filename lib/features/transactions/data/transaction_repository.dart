@@ -1,4 +1,3 @@
-import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart';
 import '../../../core/supabase/supabase_client.dart';
 
@@ -8,16 +7,30 @@ abstract class TransactionRepository {
     DateTime? from,
     DateTime? to,
     int? categoryId,
-    CategoryType? type,
+    int? accountId,
+    TransactionKind? type,
   });
 
   Future<List<Transaction>> listRecent(int profileId, {int limit = 5});
 
   Future<Transaction> createTransaction({
     required int profileId,
+    required int accountId,
     required int categoryId,
     required int amountMinorUnits,
-    required CategoryType type,
+    required TransactionKind type,
+    required DateTime occurredAt,
+    String? note,
+  });
+
+  /// Moves money from [fromAccountId] to [toAccountId] — e.g. paying a
+  /// credit card from checking. Has no category and never counts as income
+  /// or expense; it only moves balance between the two accounts.
+  Future<Transaction> createTransfer({
+    required int profileId,
+    required int fromAccountId,
+    required int toAccountId,
+    required int amountMinorUnits,
     required DateTime occurredAt,
     String? note,
   });
@@ -33,8 +46,8 @@ abstract class TransactionRepository {
   Future<void> deleteTransaction(int id);
 
   /// Permanently deletes every transaction for a profile — used by the
-  /// Settings "Reset data" action. Categories and the profile itself are
-  /// untouched.
+  /// Settings "Reset data" action. Categories, accounts, and the profile
+  /// itself are untouched.
   Future<void> deleteAllForProfile(int profileId);
 }
 
@@ -45,7 +58,8 @@ class SupabaseTransactionRepository implements TransactionRepository {
     DateTime? from,
     DateTime? to,
     int? categoryId,
-    CategoryType? type,
+    int? accountId,
+    TransactionKind? type,
   }) async {
     var query = supabase
         .from('transactions')
@@ -59,6 +73,9 @@ class SupabaseTransactionRepository implements TransactionRepository {
     }
     if (categoryId != null) {
       query = query.eq('category_id', categoryId);
+    }
+    if (accountId != null) {
+      query = query.eq('account_id', accountId);
     }
     if (type != null) {
       query = query.eq('type', type.toDb());
@@ -85,9 +102,10 @@ class SupabaseTransactionRepository implements TransactionRepository {
   @override
   Future<Transaction> createTransaction({
     required int profileId,
+    required int accountId,
     required int categoryId,
     required int amountMinorUnits,
-    required CategoryType type,
+    required TransactionKind type,
     required DateTime occurredAt,
     String? note,
   }) async {
@@ -95,9 +113,36 @@ class SupabaseTransactionRepository implements TransactionRepository {
         .from('transactions')
         .insert({
           'profile_id': profileId,
+          'account_id': accountId,
           'category_id': categoryId,
           'amount_minor_units': amountMinorUnits,
           'type': type.toDb(),
+          'occurred_at': occurredAt.toUtc().toIso8601String(),
+          'note': note,
+        })
+        .select()
+        .single();
+    return Transaction.fromRow(row);
+  }
+
+  @override
+  Future<Transaction> createTransfer({
+    required int profileId,
+    required int fromAccountId,
+    required int toAccountId,
+    required int amountMinorUnits,
+    required DateTime occurredAt,
+    String? note,
+  }) async {
+    final row = await supabase
+        .from('transactions')
+        .insert({
+          'profile_id': profileId,
+          'account_id': fromAccountId,
+          'transfer_account_id': toAccountId,
+          'category_id': null,
+          'amount_minor_units': amountMinorUnits,
+          'type': TransactionKind.transfer.toDb(),
           'occurred_at': occurredAt.toUtc().toIso8601String(),
           'note': note,
         })

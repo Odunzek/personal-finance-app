@@ -7,6 +7,7 @@ import '../../../core/notifications/reminder_service.dart';
 import '../../../core/security/pin_setup_screen.dart';
 import '../../../core/security/pin_vault.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../accounts/presentation/account_list_screen.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../budgets/data/budget_repository.dart';
 import '../../categories/presentation/category_list_screen.dart';
@@ -19,10 +20,15 @@ class SettingsScreen extends StatefulWidget {
   final TransactionRepository transactionRepository;
   final BudgetRepository budgetRepository;
 
+  /// Called after returning from a screen that may have changed data other
+  /// tabs depend on (categories, accounts), so the shell can refresh them.
+  final VoidCallback? onDataChanged;
+
   SettingsScreen({
     super.key,
     required this.profile,
     required this.authRepository,
+    this.onDataChanged,
     TransactionRepository? transactionRepository,
     BudgetRepository? budgetRepository,
   }) : transactionRepository =
@@ -157,11 +163,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(LucideIcons.tags),
                 title: const Text('Categories'),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => CategoryListScreen(profile: widget.profile),
-                  ),
-                ),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CategoryListScreen(profile: widget.profile),
+                    ),
+                  );
+                  widget.onDataChanged?.call();
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(LucideIcons.wallet),
+                title: const Text('Accounts'),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AccountListScreen(profile: widget.profile),
+                    ),
+                  );
+                  widget.onDataChanged?.call();
+                },
               ),
               const Divider(height: 1),
               ListTile(

@@ -94,12 +94,13 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     var expense = 0;
     final spentByCategoryId = <int, int>{};
     for (final t in transactions) {
-      if (t.type == CategoryType.income) {
+      if (t.isTransfer) continue;
+      if (t.type == model.TransactionKind.income) {
         income += t.amountMinorUnits;
       } else {
         expense += t.amountMinorUnits;
-        spentByCategoryId[t.categoryId] =
-            (spentByCategoryId[t.categoryId] ?? 0) + t.amountMinorUnits;
+        spentByCategoryId[t.categoryId!] =
+            (spentByCategoryId[t.categoryId!] ?? 0) + t.amountMinorUnits;
       }
     }
 

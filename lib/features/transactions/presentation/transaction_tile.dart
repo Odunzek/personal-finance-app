@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/widgets/category_badge.dart';
@@ -10,6 +12,7 @@ import '../../categories/presentation/category_style_options.dart';
 class TransactionTile extends StatelessWidget {
   final model.Transaction transaction;
   final Category? category;
+  final Map<int, Account>? accountsById;
   final VoidCallback? onTap;
   final bool showDate;
 
@@ -17,13 +20,43 @@ class TransactionTile extends StatelessWidget {
     super.key,
     required this.transaction,
     required this.category,
+    this.accountsById,
     this.onTap,
     this.showDate = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isIncome = transaction.type == CategoryType.income;
+    if (transaction.isTransfer) {
+      final toName = accountsById?[transaction.transferAccountId]?.name ?? 'account';
+      final fromName = accountsById?[transaction.accountId]?.name ?? 'account';
+      return ListTile(
+        onTap: onTap,
+        contentPadding: EdgeInsets.zero,
+        leading: CategoryBadge(
+          icon: LucideIcons.arrowRightLeft,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          size: 40,
+          iconSize: 18,
+        ),
+        title: Text(
+          transaction.note?.isNotEmpty == true ? transaction.note! : 'Transfer',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          [
+            '$fromName → $toName',
+            if (showDate) DateFormat.MMMd().format(transaction.occurredAt),
+          ].join(' · '),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: MoneyText(transaction.amountMinorUnits),
+      );
+    }
+
+    final isIncome = transaction.type == model.TransactionKind.income;
     final color = isIncome
         ? Theme.of(context).colorScheme.primary
         : Theme.of(context).colorScheme.onSurface;

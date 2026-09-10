@@ -4,10 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/layout/breakpoints.dart';
+import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../data/transaction_repository.dart';
 import 'transaction_detail_screen.dart';
@@ -17,15 +19,18 @@ class ActivityScreen extends StatefulWidget {
   final Profile profile;
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
+  final AccountRepository accountRepository;
 
   ActivityScreen({
     super.key,
     required this.profile,
     TransactionRepository? transactionRepository,
     CategoryRepository? categoryRepository,
+    AccountRepository? accountRepository,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
-       categoryRepository = categoryRepository ?? SupabaseCategoryRepository();
+       categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
+       accountRepository = accountRepository ?? SupabaseAccountRepository();
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
@@ -54,11 +59,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
         categoryId: _filterCategoryId,
       ),
       widget.categoryRepository.listActiveCategories(widget.profile.id),
+      widget.accountRepository.listActiveAccounts(widget.profile.id),
     ]);
     return _ActivityData(
       results[0] as List<model.Transaction>,
       {
         for (final c in results[1] as List<Category>) c.id: c,
+      },
+      {
+        for (final a in results[2] as List<Account>) a.id: a,
       },
     );
   }
@@ -278,11 +287,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }
     var animIndex = 0;
     return groups.entries.map((entry) {
-      final total = entry.value.fold<int>(
-        0,
-        (sum, t) =>
-            sum + (t.type == CategoryType.income ? t.amountMinorUnits : -t.amountMinorUnits),
-      );
+      final total = entry.value.fold<int>(0, (sum, t) {
+        if (t.isTransfer) return sum;
+        return sum +
+            (t.type == model.TransactionKind.income
+                ? t.amountMinorUnits
+                : -t.amountMinorUnits);
+      });
       return SliverPadding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
         sliver: SliverMainAxisGroup(
@@ -315,6 +326,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   child: TransactionTile(
                     transaction: t,
                     category: category,
+                    accountsById: data.accountsById,
                     showDate: false,
                     onTap: () => _openDetail(t, category, isTablet),
                   ),
@@ -331,8 +343,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
 class _ActivityData {
   final List<model.Transaction> transactions;
   final Map<int, Category> categoriesById;
+  final Map<int, Account> accountsById;
 
-  const _ActivityData(this.transactions, this.categoriesById);
+  const _ActivityData(this.transactions, this.categoriesById, this.accountsById);
 }
 
 class _FilterChip extends StatelessWidget {

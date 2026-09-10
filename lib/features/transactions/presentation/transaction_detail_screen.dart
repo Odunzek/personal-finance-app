@@ -154,14 +154,26 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () async {
-            await widget.transactionRepository.createTransaction(
-              profileId: t.profileId,
-              categoryId: t.categoryId,
-              amountMinorUnits: t.amountMinorUnits,
-              type: t.type,
-              occurredAt: t.occurredAt,
-              note: t.note,
-            );
+            if (t.isTransfer) {
+              await widget.transactionRepository.createTransfer(
+                profileId: t.profileId,
+                fromAccountId: t.accountId,
+                toAccountId: t.transferAccountId!,
+                amountMinorUnits: t.amountMinorUnits,
+                occurredAt: t.occurredAt,
+                note: t.note,
+              );
+            } else {
+              await widget.transactionRepository.createTransaction(
+                profileId: t.profileId,
+                accountId: t.accountId,
+                categoryId: t.categoryId!,
+                amountMinorUnits: t.amountMinorUnits,
+                type: t.type,
+                occurredAt: t.occurredAt,
+                note: t.note,
+              );
+            }
             widget.onChanged();
           },
         ),
@@ -172,7 +184,8 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
   @override
   Widget build(BuildContext context) {
     final t = widget.transaction;
-    final isIncome = t.type == CategoryType.income;
+    final isIncome = t.type == model.TransactionKind.income;
+    final isTransfer = t.isTransfer;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -186,8 +199,10 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
         ),
         Center(
           child: CategoryBadge(
-            icon: iconForKey(_category?.iconKey ?? 'other'),
-            color: _category != null ? Color(_category!.colorArgb) : null,
+            icon: isTransfer ? LucideIcons.arrowRightLeft : iconForKey(_category?.iconKey ?? 'other'),
+            color: isTransfer
+                ? Theme.of(context).colorScheme.onSurfaceVariant
+                : (_category != null ? Color(_category!.colorArgb) : null),
             size: 56,
             iconSize: 26,
           ).animate().scale(
@@ -199,15 +214,19 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
         const SizedBox(height: 12),
         Center(
           child: Text(
-            _note?.isNotEmpty == true ? _note! : (_category?.name ?? 'Uncategorized'),
+            _note?.isNotEmpty == true
+                ? _note!
+                : (isTransfer ? 'Transfer' : (_category?.name ?? 'Uncategorized')),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         Center(
           child: MoneyText(
-            isIncome ? _amountMinorUnits : -_amountMinorUnits,
+            isTransfer
+                ? _amountMinorUnits
+                : (isIncome ? _amountMinorUnits : -_amountMinorUnits),
             fontSize: 34,
-            color: isIncome ? Theme.of(context).colorScheme.primary : null,
+            color: !isTransfer && isIncome ? Theme.of(context).colorScheme.primary : null,
           ),
         ),
         const SizedBox(height: 24),
@@ -215,13 +234,16 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
           margin: EdgeInsets.zero,
           child: Column(
             children: [
-              _DetailRow('Category', _category?.name ?? 'Uncategorized'),
+              if (!isTransfer)
+                _DetailRow('Category', _category?.name ?? 'Uncategorized'),
               _DetailRow('Date', DateFormat.yMMMd().add_jm().format(_occurredAt)),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        OutlinedButton(onPressed: _recategorize, child: const Text('Recategorize')),
+        if (!isTransfer) ...[
+          const SizedBox(height: 16),
+          OutlinedButton(onPressed: _recategorize, child: const Text('Recategorize')),
+        ],
       ],
     );
   }

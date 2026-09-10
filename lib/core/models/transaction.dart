@@ -1,31 +1,51 @@
-import 'category.dart';
+/// Distinct from [CategoryType] (which only ever describes a category) —
+/// a transaction can also be a transfer between two of the user's own
+/// accounts, which has no category and never counts as income or expense.
+enum TransactionKind {
+  income,
+  expense,
+  transfer;
+
+  String toDb() => name;
+
+  static TransactionKind fromDb(String value) =>
+      TransactionKind.values.firstWhere((t) => t.name == value);
+}
 
 class Transaction {
   final int id;
   final int profileId;
-  final int categoryId;
+  final int accountId;
+  final int? categoryId;
+  final int? transferAccountId;
   final int amountMinorUnits;
-  final CategoryType type;
+  final TransactionKind type;
   final DateTime occurredAt;
   final String? note;
 
   const Transaction({
     required this.id,
     required this.profileId,
+    required this.accountId,
     required this.categoryId,
+    required this.transferAccountId,
     required this.amountMinorUnits,
     required this.type,
     required this.occurredAt,
     this.note,
   });
 
+  bool get isTransfer => type == TransactionKind.transfer;
+
   factory Transaction.fromRow(Map<String, dynamic> row) {
     return Transaction(
       id: row['id'] as int,
       profileId: row['profile_id'] as int,
-      categoryId: row['category_id'] as int,
+      accountId: row['account_id'] as int,
+      categoryId: row['category_id'] as int?,
+      transferAccountId: row['transfer_account_id'] as int?,
       amountMinorUnits: row['amount_minor_units'] as int,
-      type: CategoryType.fromDb(row['type'] as String),
+      type: TransactionKind.fromDb(row['type'] as String),
       occurredAt: DateTime.parse(row['occurred_at'] as String).toLocal(),
       note: row['note'] as String?,
     );

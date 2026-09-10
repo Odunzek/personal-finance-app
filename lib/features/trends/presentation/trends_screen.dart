@@ -85,13 +85,14 @@ class _TrendsScreenState extends State<TrendsScreen> {
     final spendByMonth = List.generate(6, (_) => <int, int>{});
 
     for (final t in transactions) {
+      if (t.isTransfer) continue;
       for (var i = 0; i < months.length; i++) {
         if (!t.occurredAt.isBefore(months[i].start) &&
             t.occurredAt.isBefore(months[i].endExclusive)) {
-          if (t.type == CategoryType.expense) {
+          if (t.type == model.TransactionKind.expense) {
             monthlyExpense[i] += t.amountMinorUnits / 100;
-            spendByMonth[i][t.categoryId] =
-                (spendByMonth[i][t.categoryId] ?? 0) + t.amountMinorUnits;
+            spendByMonth[i][t.categoryId!] =
+                (spendByMonth[i][t.categoryId!] ?? 0) + t.amountMinorUnits;
           } else {
             monthlyIncome[i] += t.amountMinorUnits / 100;
           }
