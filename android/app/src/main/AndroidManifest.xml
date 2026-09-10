@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required at runtime for the Supabase backend; the debug/profile
+         manifests already had this, but only for the dev tooling
+         connection, so its absence here went unnoticed until a real
+         release build tried to talk to Supabase and had no network access. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
