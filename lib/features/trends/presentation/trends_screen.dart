@@ -4,6 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/layout/breakpoints.dart';
+import '../../../core/models/account.dart';
+import '../../../core/models/account_balance.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/money.dart';
 import '../../../core/models/month_range.dart';
@@ -11,6 +13,7 @@ import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
+import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../../transactions/data/transaction_repository.dart';
@@ -19,15 +22,18 @@ class TrendsScreen extends StatefulWidget {
   final Profile profile;
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
+  final AccountRepository accountRepository;
 
   TrendsScreen({
     super.key,
     required this.profile,
     TransactionRepository? transactionRepository,
     CategoryRepository? categoryRepository,
+    AccountRepository? accountRepository,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
-       categoryRepository = categoryRepository ?? SupabaseCategoryRepository();
+       categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
+       accountRepository = accountRepository ?? SupabaseAccountRepository();
 
   @override
   State<TrendsScreen> createState() => _TrendsScreenState();
@@ -38,12 +44,16 @@ class _TrendsData {
   final List<double> monthlyIncome;
   final List<String> monthLabels;
   final List<Map<Category, int>> spendByCategoryPerMonth;
+  final List<double> netWorthByMonthEnd;
+  final List<double> debtByMonthEnd;
 
   const _TrendsData(
     this.monthlyExpense,
     this.monthlyIncome,
     this.monthLabels,
     this.spendByCategoryPerMonth,
+    this.netWorthByMonthEnd,
+    this.debtByMonthEnd,
   );
 }
 
@@ -74,11 +84,35 @@ class _TrendsScreenState extends State<TrendsScreen> {
         to: latest,
       ),
       widget.categoryRepository.listActiveCategories(widget.profile.id),
+      // Net worth at each checkpoint depends on every transaction since the
+      // account was opened, not just the last 6 months, so this is fetched
+      // unbounded rather than reusing the windowed query above.
+      widget.transactionRepository.listTransactions(widget.profile.id),
+      widget.accountRepository.listActiveAccounts(widget.profile.id),
     ]);
     final transactions = results[0] as List<model.Transaction>;
-    final categories = {
-      for (final c in results[1] as List<Category>) c.id: c,
-    };
+    final categories = {for (final c in results[1] as List<Category>) c.id: c};
+    final allTransactions = results[2] as List<model.Transaction>;
+    final accounts = results[3] as List<Account>;
+
+    final netWorthByMonthEnd = <double>[];
+    final debtByMonthEnd = <double>[];
+    for (final month in months) {
+      final upToMonthEnd = allTransactions
+          .where((t) => t.occurredAt.isBefore(month.endExclusive))
+          .toList();
+      var netWorth = 0;
+      var debt = 0;
+      for (final account in accounts) {
+        final balance = computeAccountBalance(account, upToMonthEnd);
+        netWorth += balance;
+        if (account.type == AccountType.liability && balance < 0) {
+          debt += -balance;
+        }
+      }
+      netWorthByMonthEnd.add(netWorth / 100);
+      debtByMonthEnd.add(debt / 100);
+    }
 
     final monthlyExpense = List<double>.filled(6, 0);
     final monthlyIncome = List<double>.filled(6, 0);
@@ -117,6 +151,8 @@ class _TrendsScreenState extends State<TrendsScreen> {
       monthlyIncome,
       months.map((m) => m.label).toList(),
       spendByCategoryPerMonth,
+      netWorthByMonthEnd,
+      debtByMonthEnd,
     );
   }
 
@@ -129,10 +165,10 @@ class _TrendsScreenState extends State<TrendsScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         final data = snapshot.data!;
-        final maxY = [...data.monthlyExpense, ...data.monthlyIncome].fold<double>(
-          1,
-          (m, v) => v > m ? v : m,
-        );
+        final maxY = [
+          ...data.monthlyExpense,
+          ...data.monthlyIncome,
+        ].fold<double>(1, (m, v) => v > m ? v : m);
         final breakdown = data.spendByCategoryPerMonth[_selectedMonthIndex];
         final breakdownTotal = breakdown.values.fold<int>(0, (a, b) => a + b);
         final isCurrentMonth = _selectedMonthIndex == 5;
@@ -144,22 +180,34 @@ class _TrendsScreenState extends State<TrendsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 10,
+                  runSpacing: 4,
                   children: [
-                    Icon(
-                      LucideIcons.trendingUp,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          LucideIcons.trendingUp,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Income vs expense, last 6 months',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Income vs expense, last 6 months',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    _LegendDot(
+                      color: Theme.of(context).colorScheme.primary,
+                      label: 'Income',
                     ),
-                    const Spacer(),
-                    _LegendDot(color: Theme.of(context).colorScheme.primary, label: 'Income'),
-                    const SizedBox(width: 10),
-                    _LegendDot(color: Theme.of(context).colorScheme.error, label: 'Expense'),
+                    _LegendDot(
+                      color: Theme.of(context).colorScheme.error,
+                      label: 'Expense',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -169,112 +217,134 @@ class _TrendsScreenState extends State<TrendsScreen> {
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                      height: 160,
-                      child: BarChart(
-                        duration: 700.ms,
-                        curve: Curves.easeOutCubic,
-                        BarChartData(
-                          maxY: maxY * 1.2,
-                          gridData: const FlGridData(show: false),
-                          borderData: FlBorderData(show: false),
-                          barTouchData: BarTouchData(
-                            touchTooltipData: BarTouchTooltipData(
-                              getTooltipColor: (_) =>
-                                  Theme.of(context).colorScheme.inverseSurface,
-                              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                final label = rodIndex == 0 ? 'Income' : 'Expense';
-                                return BarTooltipItem(
-                                  '$label\n${formatMoney((rod.toY * 100).round())}',
-                                  TextStyle(
-                                    color: Theme.of(context).colorScheme.onInverseSurface,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                );
-                              },
-                            ),
-                            touchCallback: (event, response) {
-                              if (!event.isInterestedForInteractions) return;
-                              final index = response?.spot?.touchedBarGroupIndex;
-                              if (index == null) return;
-                              setState(() => _selectedMonthIndex = index);
-                            },
-                          ),
-                          titlesData: FlTitlesData(
-                            leftTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            rightTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            topTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                getTitlesWidget: (value, meta) {
-                                  final selected = value.toInt() == _selectedMonthIndex;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Text(
-                                      data.monthLabels[value.toInt()],
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontWeight: selected ? FontWeight.w700 : null,
+                  height: 160,
+                  child: BarChart(
+                    duration: 700.ms,
+                    curve: Curves.easeOutCubic,
+                    BarChartData(
+                      maxY: maxY * 1.2,
+                      gridData: const FlGridData(show: false),
+                      borderData: FlBorderData(show: false),
+                      barTouchData: BarTouchData(
+                        touchTooltipData: BarTouchTooltipData(
+                          getTooltipColor: (_) =>
+                              Theme.of(context).colorScheme.inverseSurface,
+                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                            final label = rodIndex == 0 ? 'Income' : 'Expense';
+                            return BarTooltipItem(
+                              '$label\n${formatMoney((rod.toY * 100).round())}',
+                              TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onInverseSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          },
+                        ),
+                        touchCallback: (event, response) {
+                          if (!event.isInterestedForInteractions) return;
+                          final index = response?.spot?.touchedBarGroupIndex;
+                          if (index == null) return;
+                          setState(() => _selectedMonthIndex = index);
+                        },
+                      ),
+                      titlesData: FlTitlesData(
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (value, meta) {
+                              final selected =
+                                  value.toInt() == _selectedMonthIndex;
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  data.monthLabels[value.toInt()],
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        fontWeight: selected
+                                            ? FontWeight.w700
+                                            : null,
                                         color: selected
-                                            ? Theme.of(context).colorScheme.onSurface
+                                            ? Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
                                             : null,
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                                ),
+                              );
+                            },
                           ),
-                          barGroups: [
-                            for (var i = 0; i < data.monthlyExpense.length; i++)
-                              BarChartGroupData(
-                                x: i,
-                                barsSpace: 4,
-                                barRods: [
-                                  BarChartRodData(
-                                    toY: data.monthlyIncome[i],
-                                    width: 11,
-                                    borderRadius: BorderRadius.circular(6),
-                                    gradient: LinearGradient(
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                      colors: [
-                                        Theme.of(context).colorScheme.primary
-                                            .withValues(alpha: i == _selectedMonthIndex ? 1 : 0.4),
-                                        Theme.of(context).colorScheme.primary
-                                            .withValues(alpha: i == _selectedMonthIndex ? 0.55 : 0.2),
-                                      ],
-                                    ),
-                                  ),
-                                  BarChartRodData(
-                                    toY: data.monthlyExpense[i],
-                                    width: 11,
-                                    borderRadius: BorderRadius.circular(6),
-                                    gradient: LinearGradient(
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                      colors: [
-                                        Theme.of(context).colorScheme.error
-                                            .withValues(alpha: i == _selectedMonthIndex ? 1 : 0.4),
-                                        Theme.of(context).colorScheme.error
-                                            .withValues(alpha: i == _selectedMonthIndex ? 0.55 : 0.2),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
                         ),
                       ),
+                      barGroups: [
+                        for (var i = 0; i < data.monthlyExpense.length; i++)
+                          BarChartGroupData(
+                            x: i,
+                            barsSpace: 4,
+                            barRods: [
+                              BarChartRodData(
+                                toY: data.monthlyIncome[i],
+                                width: 11,
+                                borderRadius: BorderRadius.circular(6),
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withValues(
+                                      alpha: i == _selectedMonthIndex ? 1 : 0.4,
+                                    ),
+                                    Theme.of(context).colorScheme.primary
+                                        .withValues(
+                                          alpha: i == _selectedMonthIndex
+                                              ? 0.55
+                                              : 0.2,
+                                        ),
+                                  ],
+                                ),
+                              ),
+                              BarChartRodData(
+                                toY: data.monthlyExpense[i],
+                                width: 11,
+                                borderRadius: BorderRadius.circular(6),
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.error.withValues(
+                                      alpha: i == _selectedMonthIndex ? 1 : 0.4,
+                                    ),
+                                    Theme.of(context).colorScheme.error
+                                        .withValues(
+                                          alpha: i == _selectedMonthIndex
+                                              ? 0.55
+                                              : 0.2,
+                                        ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
+            ),
+          ),
         ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0);
 
         final breakdownCard = Card(
@@ -304,60 +374,229 @@ class _TrendsScreenState extends State<TrendsScreen> {
                 if (breakdown.isEmpty)
                   const Text('No spending recorded that month.')
                 else
-                  ...breakdown.entries.toList().asMap().entries.map(
-                    (indexed) {
-                      final entry = indexed.value;
-                      final share = breakdownTotal == 0 ? 0.0 : entry.value / breakdownTotal;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CategoryBadge(
-                                  icon: iconForKey(entry.key.iconKey),
-                                  color: Color(entry.key.colorArgb),
-                                  size: 28,
-                                  iconSize: 14,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(child: Text(entry.key.name)),
-                                Text(
-                                  '${(share * 100).round()}%',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                MoneyText(entry.value, fontSize: 14),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(3),
-                              child: TweenAnimationBuilder<double>(
-                                tween: Tween(begin: 0, end: share),
-                                duration: 500.ms,
-                                curve: Curves.easeOutCubic,
-                                builder: (context, value, _) => LinearProgressIndicator(
-                                  value: value,
-                                  minHeight: 6,
-                                  backgroundColor:
-                                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  color: Color(entry.key.colorArgb),
-                                ),
+                  ...breakdown.entries.toList().asMap().entries.map((indexed) {
+                    final entry = indexed.value;
+                    final share = breakdownTotal == 0
+                        ? 0.0
+                        : entry.value / breakdownTotal;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CategoryBadge(
+                                icon: iconForKey(entry.key.iconKey),
+                                color: Color(entry.key.colorArgb),
+                                size: 28,
+                                iconSize: 14,
                               ),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text(entry.key.name)),
+                              Text(
+                                '${(share * 100).round()}%',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(width: 10),
+                              MoneyText(entry.value, fontSize: 14),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0, end: share),
+                              duration: 500.ms,
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, _) =>
+                                  LinearProgressIndicator(
+                                    value: value,
+                                    minHeight: 6,
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest,
+                                    color: Color(entry.key.colorArgb),
+                                  ),
                             ),
-                          ],
-                        ),
-                      ).animate().fadeIn(delay: (indexed.key * 50).ms, duration: 200.ms);
-                    },
-                  ),
+                          ),
+                        ],
+                      ),
+                    ).animate().fadeIn(
+                      delay: (indexed.key * 50).ms,
+                      duration: 200.ms,
+                    );
+                  }),
               ],
             ),
           ),
         ).animate().fadeIn(delay: 80.ms, duration: 300.ms).slideY(begin: 0.05, end: 0);
+
+        final hasDebt = data.debtByMonthEnd.any((d) => d > 0);
+        final netWorthCard =
+            Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 10,
+                          runSpacing: 4,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  LucideIcons.lineChart,
+                                  size: 18,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Net worth, last 6 months',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                            _LegendDot(
+                              color: Theme.of(context).colorScheme.primary,
+                              label: 'Net worth',
+                            ),
+                            if (hasDebt)
+                              _LegendDot(
+                                color: Theme.of(context).colorScheme.error,
+                                label: 'Debt owed',
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 160,
+                          child: LineChart(
+                            duration: 700.ms,
+                            curve: Curves.easeOutCubic,
+                            LineChartData(
+                              gridData: const FlGridData(show: false),
+                              borderData: FlBorderData(show: false),
+                              lineTouchData: LineTouchData(
+                                touchTooltipData: LineTouchTooltipData(
+                                  getTooltipColor: (_) =>
+                                      Theme.of(context)
+                                          .colorScheme
+                                          .inverseSurface,
+                                  getTooltipItems: (spots) => spots.map((s) {
+                                    final label = s.barIndex == 0
+                                        ? 'Net worth'
+                                        : 'Debt owed';
+                                    return LineTooltipItem(
+                                      '$label\n${formatMoney((s.y * 100).round())}',
+                                      TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onInverseSurface,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                              titlesData: FlTitlesData(
+                                leftTitles: const AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                rightTitles: const AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                topTitles: const AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    interval: 1,
+                                    getTitlesWidget: (value, meta) {
+                                      final index = value.round();
+                                      if (index < 0 ||
+                                          index >= data.monthLabels.length) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Text(
+                                          data.monthLabels[index],
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              minX: 0,
+                              maxX: (data.monthLabels.length - 1).toDouble(),
+                              lineBarsData: [
+                                LineChartBarData(
+                                  spots: [
+                                    for (
+                                      var i = 0;
+                                      i < data.netWorthByMonthEnd.length;
+                                      i++
+                                    )
+                                      FlSpot(
+                                        i.toDouble(),
+                                        data.netWorthByMonthEnd[i],
+                                      ),
+                                  ],
+                                  isCurved: true,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  barWidth: 3,
+                                  dotData: const FlDotData(show: true),
+                                  belowBarData: BarAreaData(
+                                    show: true,
+                                    color: Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: 0.1),
+                                  ),
+                                ),
+                                if (hasDebt)
+                                  LineChartBarData(
+                                    spots: [
+                                      for (
+                                        var i = 0;
+                                        i < data.debtByMonthEnd.length;
+                                        i++
+                                      )
+                                        FlSpot(
+                                          i.toDouble(),
+                                          data.debtByMonthEnd[i],
+                                        ),
+                                    ],
+                                    isCurved: true,
+                                    color: Theme.of(context).colorScheme.error,
+                                    barWidth: 3,
+                                    dotData: const FlDotData(show: true),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .animate()
+                .fadeIn(delay: 140.ms, duration: 300.ms)
+                .slideY(begin: 0.05, end: 0);
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -365,7 +604,10 @@ class _TrendsScreenState extends State<TrendsScreen> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
               children: [
-                Text('Trends', style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  'Trends',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 16),
                 if (isTablet)
                   IntrinsicHeight(
@@ -383,6 +625,8 @@ class _TrendsScreenState extends State<TrendsScreen> {
                   const SizedBox(height: 12),
                   breakdownCard,
                 ],
+                const SizedBox(height: 12),
+                netWorthCard,
               ],
             );
           },
