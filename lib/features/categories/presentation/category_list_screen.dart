@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/category.dart';
+import '../../../core/models/default_categories.dart';
 import '../../../core/models/profile.dart';
 import '../data/category_repository.dart';
 import 'category_form_sheet.dart';
@@ -67,6 +68,26 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
     _reload();
   }
 
+  Future<void> _addMissingDefaults() async {
+    final existing = await widget.categoryRepository.listActiveCategories(
+      widget.profile.id,
+    );
+    final existingNames = existing.map((c) => c.name.toLowerCase()).toSet();
+    final missing = kDefaultCategorySeeds.where(
+      (seed) => !existingNames.contains(seed.name.toLowerCase()),
+    );
+    for (final seed in missing) {
+      await widget.categoryRepository.createCategory(
+        profileId: widget.profile.id,
+        name: seed.name,
+        type: seed.type,
+        colorArgb: seed.colorArgb,
+        iconKey: seed.iconKey,
+      );
+    }
+    _reload();
+  }
+
   Future<void> _deactivateCategory(Category category) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -96,7 +117,16 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.profile.displayName)),
+      appBar: AppBar(
+        title: Text(widget.profile.displayName),
+        actions: [
+          IconButton(
+            onPressed: _addMissingDefaults,
+            icon: const Icon(LucideIcons.sparkles),
+            tooltip: 'Add default categories',
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addCategory,
         child: const Icon(LucideIcons.plus),
