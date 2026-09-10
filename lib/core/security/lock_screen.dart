@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -14,7 +15,8 @@ class LockScreen extends StatefulWidget {
 
 class _LockScreenState extends State<LockScreen> {
   final _auth = LocalAuthentication();
-  String _entered = '';
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   bool _error = false;
   bool _checking = false;
 
@@ -22,6 +24,13 @@ class _LockScreenState extends State<LockScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryBiometric());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _tryBiometric() async {
@@ -40,7 +49,7 @@ class _LockScreenState extends State<LockScreen> {
 
   Future<void> _submit() async {
     setState(() => _checking = true);
-    final ok = await PinVault.verifyPin(_entered);
+    final ok = await PinVault.verifyPin(_controller.text);
     if (!mounted) return;
     if (ok) {
       AppLockController.instance.unlock();
@@ -48,26 +57,14 @@ class _LockScreenState extends State<LockScreen> {
     }
     setState(() {
       _error = true;
-      _entered = '';
+      _controller.clear();
       _checking = false;
     });
   }
 
-  void _press(String key) {
-    if (_checking) return;
-    setState(() {
-      _error = false;
-      if (key == '⌫') {
-        if (_entered.isNotEmpty) {
-          _entered = _entered.substring(0, _entered.length - 1);
-        }
-      } else if (_entered.length < 4) {
-        _entered += key;
-      }
-    });
-    if (_entered.length == 4 && key != '⌫') {
-      _submit();
-    }
+  void _onChanged(String value) {
+    if (_error) setState(() => _error = false);
+    if (value.length == 4) _submit();
   }
 
   @override
@@ -76,7 +73,7 @@ class _LockScreenState extends State<LockScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 340),
+            constraints: const BoxConstraints(maxWidth: 280),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -91,82 +88,30 @@ class _LockScreenState extends State<LockScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(4, (i) {
-                    final filled = i < _entered.length;
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 6),
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _error
-                            ? Theme.of(context).colorScheme.error
-                            : filled
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 32),
-                GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.4,
-                  children: [
-                    for (final k in [
-                      '1',
-                      '2',
-                      '3',
-                      '4',
-                      '5',
-                      '6',
-                      '7',
-                      '8',
-                      '9',
-                      '',
-                      '0',
-                      '⌫',
-                    ])
-                      if (k.isEmpty)
-                        const SizedBox.shrink()
-                      else
-                        _KeypadButton(label: k, onTap: () => _press(k)),
+                TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  autofocus: true,
+                  enabled: !_checking,
+                  obscureText: true,
+                  obscuringCharacter: '●',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(4),
                   ],
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium
+                      ?.copyWith(letterSpacing: 20),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    errorText: _error ? 'That didn\'t match.' : null,
+                  ),
+                  onChanged: _onChanged,
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _KeypadButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _KeypadButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Center(
-          child: label == '⌫'
-              ? const Icon(LucideIcons.delete)
-              : Text(label, style: Theme.of(context).textTheme.titleLarge),
         ),
       ),
     );

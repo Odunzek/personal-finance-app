@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter/services.dart';
 
 import 'app_lock_controller.dart';
 import 'pin_vault.dart';
@@ -19,20 +19,27 @@ enum _Step { confirmCurrent, enterNew, confirmNew }
 
 class _PinSetupScreenState extends State<PinSetupScreen> {
   late _Step _step = widget.hasPin ? _Step.confirmCurrent : _Step.enterNew;
-  String _entered = '';
+  final _controller = TextEditingController();
   String _firstNewPin = '';
   bool _error = false;
   bool _removing = false;
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
+    final entered = _controller.text;
     switch (_step) {
       case _Step.confirmCurrent:
-        final ok = await PinVault.verifyPin(_entered);
+        final ok = await PinVault.verifyPin(entered);
         if (!mounted) return;
         if (!ok) {
           setState(() {
             _error = true;
-            _entered = '';
+            _controller.clear();
           });
           return;
         }
@@ -44,42 +51,33 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
         }
         setState(() {
           _step = _Step.enterNew;
-          _entered = '';
+          _controller.clear();
           _error = false;
         });
       case _Step.enterNew:
         setState(() {
-          _firstNewPin = _entered;
-          _entered = '';
+          _firstNewPin = entered;
+          _controller.clear();
           _step = _Step.confirmNew;
         });
       case _Step.confirmNew:
-        if (_entered != _firstNewPin) {
+        if (entered != _firstNewPin) {
           setState(() {
             _error = true;
-            _entered = '';
+            _controller.clear();
             _firstNewPin = '';
             _step = _Step.enterNew;
           });
           return;
         }
-        await PinVault.setPin(_entered);
+        await PinVault.setPin(entered);
         if (mounted) Navigator.of(context).pop(true);
     }
   }
 
-  void _press(String key) {
-    setState(() {
-      _error = false;
-      if (key == '⌫') {
-        if (_entered.isNotEmpty) {
-          _entered = _entered.substring(0, _entered.length - 1);
-        }
-        return;
-      }
-      if (_entered.length < 4) _entered += key;
-    });
-    if (_entered.length == 4 && key != '⌫') _submit();
+  void _onChanged(String value) {
+    if (_error) setState(() => _error = false);
+    if (value.length == 4) _submit();
   }
 
   String get _title {
@@ -105,7 +103,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               onPressed: () => setState(() {
                 _removing = true;
                 _step = _Step.confirmCurrent;
-                _entered = '';
+                _controller.clear();
               }),
               child: const Text('Turn off'),
             ),
@@ -114,97 +112,34 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 340),
+            constraints: const BoxConstraints(maxWidth: 280),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(_title, style: Theme.of(context).textTheme.titleMedium),
-                if (_error) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'That didn\'t match. Try again.',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(4, (i) {
-                    final filled = i < _entered.length;
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 6),
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _error
-                            ? Theme.of(context).colorScheme.error
-                            : filled
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 32),
-                GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.4,
-                  children: [
-                    for (final k in [
-                      '1',
-                      '2',
-                      '3',
-                      '4',
-                      '5',
-                      '6',
-                      '7',
-                      '8',
-                      '9',
-                      '',
-                      '0',
-                      '⌫',
-                    ])
-                      if (k.isEmpty)
-                        const SizedBox.shrink()
-                      else
-                        _PadButton(label: k, onTap: () => _press(k)),
+                TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  obscureText: true,
+                  obscuringCharacter: '●',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(4),
                   ],
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium
+                      ?.copyWith(letterSpacing: 20),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    errorText: _error ? 'That didn\'t match. Try again.' : null,
+                  ),
+                  onChanged: _onChanged,
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PadButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _PadButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Center(
-          child: label == '⌫'
-              ? const Icon(LucideIcons.delete)
-              : Text(label, style: Theme.of(context).textTheme.titleLarge),
         ),
       ),
     );
