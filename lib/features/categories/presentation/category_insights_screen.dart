@@ -137,8 +137,39 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
                 : SizedBox(height: 220, child: _chart(context, buckets)),
           ),
         ),
+        if (_granularity != _Granularity.day &&
+            widget.category.type == CategoryType.expense &&
+            buckets.where((b) => b.amountMinorUnits != 0).length > 1) ...[
+          const SizedBox(height: 12),
+          _overspendLegend(context),
+        ],
       ],
     );
+  }
+
+  Widget _overspendLegend(BuildContext context) {
+    final base = Color(widget.category.colorArgb);
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 16,
+      runSpacing: 4,
+      children: [
+        _LegendDot(color: base, label: 'Typical'),
+        _LegendDot(color: _overspendColor(base), label: 'Above average'),
+      ],
+    );
+  }
+
+  // A category's own color can coincidentally match the theme's semantic
+  // "concern" color (e.g. a coral-toned category next to a coral error
+  // color), making a flat color swap invisible. Darkening the category's
+  // own hue instead always reads as distinct, regardless of what that hue is.
+  Color _overspendColor(Color base) {
+    final hsl = HSLColor.fromColor(base);
+    return hsl
+        .withLightness((hsl.lightness * 0.5).clamp(0.0, 1.0))
+        .withSaturation((hsl.saturation * 1.2).clamp(0.0, 1.0))
+        .toColor();
   }
 
   Widget _calendarHeatmap(BuildContext context, List<_Bucket> buckets) {
@@ -320,6 +351,7 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
   }
 
   Widget _chart(BuildContext context, List<_Bucket> buckets) {
+    final scheme = Theme.of(context).colorScheme;
     final maxY = buckets.fold<double>(
       1,
       (m, b) => b.amountMinorUnits / 100 > m ? b.amountMinorUnits / 100 : m,
@@ -332,26 +364,28 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
         : nonZero.fold<int>(0, (s, b) => s + b.amountMinorUnits) /
               nonZero.length /
               100;
+    final showAverage = average > 0 && buckets.length > 1;
+    final flagOverspending =
+        showAverage && widget.category.type == CategoryType.expense;
     final color = Color(widget.category.colorArgb);
     return BarChart(
       BarChartData(
         maxY: maxY * 1.2,
         gridData: const FlGridData(show: false),
         borderData: FlBorderData(show: false),
-        extraLinesData: average > 0 && buckets.length > 1
+        extraLinesData: showAverage
             ? ExtraLinesData(
                 horizontalLines: [
                   HorizontalLine(
                     y: average,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    strokeWidth: 1,
-                    dashArray: [6, 4],
+                    color: color.withValues(alpha: 0.7),
+                    strokeWidth: 1.5,
+                    dashArray: [5, 5],
                     label: HorizontalLineLabel(
                       show: true,
                       alignment: Alignment.topRight,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall
+                          ?.copyWith(color: color),
                       labelResolver: (_) => 'avg',
                     ),
                   ),
@@ -411,14 +445,40 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
             BarChartGroupData(
               x: i,
               barRods: [
-                BarChartRodData(
-                  toY: buckets[i].amountMinorUnits / 100,
-                  width: buckets.length > 20 ? 6 : 14,
-                  borderRadius: BorderRadius.circular(4),
-                  color: currentIndex == null || currentIndex == i
-                      ? color
-                      : color.withValues(alpha: 0.45),
-                ),
+                () {
+                  final value = buckets[i].amountMinorUnits / 100;
+                  final isOver = flagOverspending && value > average;
+                  final rodBorder = i == currentIndex
+                      ? BorderSide(color: scheme.onSurface, width: 1.5)
+                      : BorderSide.none;
+                  return BarChartRodData(
+                    toY: value,
+                    width: buckets.length > 20 ? 6 : 14,
+                    borderRadius: BorderRadius.circular(4),
+                    color: color,
+                    borderSide: rodBorder,
+                    // The portion above average is capped in a darkened
+                    // shade of the category's own color, so overspending
+                    // reads even when a category's brand color happens to
+                    // already sit close to the theme's semantic error hue.
+                    rodStackItems: isOver
+                        ? [
+                            BarChartRodStackItem(
+                              0,
+                              average,
+                              color,
+                              borderSide: rodBorder,
+                            ),
+                            BarChartRodStackItem(
+                              average,
+                              value,
+                              _overspendColor(color),
+                              borderSide: rodBorder,
+                            ),
+                          ]
+                        : [],
+                  );
+                }(),
               ],
             ),
         ],
@@ -432,6 +492,29 @@ class _Bucket {
   final int amountMinorUnits;
 
   const _Bucket(this.label, this.amountMinorUnits);
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
 }
 
 class _HeatmapDay extends StatelessWidget {

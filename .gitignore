@@ -49,3 +49,7 @@ app.*.map.json
 
 # Secrets - never commit actual Supabase credentials
 .env
+
+# Local test/dev artifacts - not part of the app source
+.test_screenshots/
+/Mobile finance app design/
