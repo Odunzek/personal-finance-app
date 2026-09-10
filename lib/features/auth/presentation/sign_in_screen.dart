@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/widgets/kinscope_logo.dart';
 import '../data/auth_repository.dart';
@@ -81,33 +83,42 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Center(child: KinscopeLogo(width: 160)),
+                    const Center(child: KinscopeLogo(width: 160))
+                        .animate()
+                        .fadeIn(duration: 400.ms)
+                        .scale(begin: const Offset(0.9, 0.9)),
                     const SizedBox(height: 40),
                     Text(
                       _isSignUp ? 'Create your account' : 'Welcome back',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w600),
-                    ),
+                    ).animate().fadeIn(delay: 100.ms, duration: 300.ms),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(labelText: 'Email'),
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(LucideIcons.mail),
+                      ),
                       validator: (value) => (value == null || !value.contains('@'))
                           ? 'Enter a valid email'
                           : null,
-                    ),
+                    ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
                       autofillHints: const [AutofillHints.password],
-                      decoration: const InputDecoration(labelText: 'Password'),
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: Icon(LucideIcons.lockKeyhole),
+                      ),
                       validator: (value) => (value == null || value.length < 6)
                           ? 'At least 6 characters'
                           : null,
-                    ),
+                    ).animate().fadeIn(delay: 200.ms, duration: 300.ms),
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 16),
                       Text(

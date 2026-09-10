@@ -40,7 +40,7 @@ void main() {
     );
 
     await tester.tap(find.text('Sign in'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Enter a valid email'), findsOneWidget);
     expect(find.text('At least 6 characters'), findsOneWidget);

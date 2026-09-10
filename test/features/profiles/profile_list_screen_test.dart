@@ -1,0 +1,109 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:finance_app/core/models/profile.dart';
+import 'package:finance_app/features/auth/data/auth_repository.dart';
+import 'package:finance_app/features/profiles/data/profile_repository.dart';
+import 'package:finance_app/features/profiles/presentation/profile_list_screen.dart';
+
+class _FakeAuthRepository implements AuthRepository {
+  @override
+  Stream<AuthState> get authStateChanges => const Stream.empty();
+
+  @override
+  User? get currentUser => null;
+
+  @override
+  Future<void> signIn({required String email, required String password}) async {}
+
+  @override
+  Future<void> signUp({required String email, required String password}) async {}
+
+  @override
+  Future<void> signOut() async {}
+}
+
+class _FakeProfileRepository implements ProfileRepository {
+  final List<Profile> profiles;
+  int nextId = 1;
+
+  _FakeProfileRepository([List<Profile>? initial]) : profiles = initial ?? [];
+
+  @override
+  Future<List<Profile>> listProfiles() async => profiles;
+
+  @override
+  Future<Profile> createProfile({
+    required String displayName,
+    required String currencyCode,
+  }) async {
+    final profile = Profile(
+      id: nextId++,
+      displayName: displayName,
+      currencyCode: currencyCode,
+      sortOrder: 0,
+    );
+    profiles.add(profile);
+    return profile;
+  }
+
+  @override
+  Future<void> renameProfile(int id, String displayName) async {}
+
+  @override
+  Future<void> deleteProfile(int id) async {
+    profiles.removeWhere((p) => p.id == id);
+  }
+}
+
+void main() {
+  testWidgets('shows empty state with no profiles', (tester) async {
+    final repo = _FakeProfileRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileListScreen(
+          authRepository: _FakeAuthRepository(),
+          profileRepository: repo,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Create your first profile'), findsOneWidget);
+  });
+
+  testWidgets('adding another profile calls createProfile and lists it', (
+    tester,
+  ) async {
+    // Start with one profile already present so creating a second one stays
+    // on this screen (only the very first profile ever auto-continues into
+    // the main app shell).
+    final repo = _FakeProfileRepository([
+      const Profile(id: 1, displayName: 'Existing', currencyCode: 'CAD', sortOrder: 0),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileListScreen(
+          authRepository: _FakeAuthRepository(),
+          profileRepository: repo,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Profile name'),
+      'Personal',
+    );
+    await tester.tap(find.text('Create'));
+    await tester.pumpAndSettle();
+
+    expect(repo.profiles.map((p) => p.displayName), ['Existing', 'Personal']);
+    expect(find.text('Personal'), findsOneWidget);
+    expect(find.text('Existing'), findsOneWidget);
+  });
+}

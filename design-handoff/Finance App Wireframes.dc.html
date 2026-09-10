@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
+<style>
+body{margin:0;background:#f0eee9;font-family:'Kalam',ui-rounded,system-ui,sans-serif}
+a{color:#2C6E79}a:hover{color:#1c1c1c}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+
+.wrap{padding:18px;display:flex;flex-direction:column;gap:18px}
+.frames{display:flex;gap:16px}
+.fcap{font:400 11px 'Kalam';color:#8a8578;margin-bottom:5px;letter-spacing:.02em}
+.ph{width:320px;height:646px;border:2px solid #1c1c1c;border-radius:20px;background:#fff;overflow:hidden;display:flex;flex-direction:column}
+.tb{width:1000px;height:470px;border:2px solid #1c1c1c;border-radius:12px;background:#fff;overflow:hidden;display:flex}
+.sb{height:19px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 13px;font:600 9px system-ui,sans-serif;color:#a8a29a;border-bottom:1px dashed #ebe7de}
+.bd{flex:1;min-height:0;padding:13px;display:flex;flex-direction:column;gap:9px;overflow:hidden}
+.h1{font:700 20px/1.05 'Kalam';color:#1c1c1c;margin:0}
+.h2{font:700 14px/1.15 'Kalam';color:#1c1c1c;margin:0}
+.mut{font:400 11.5px/1.25 'Kalam';color:#8f8a7e}
+.big{font:700 34px/.95 'Kalam';color:#1c1c1c}
+.mid{font:700 22px/1 'Kalam';color:#1c1c1c}
+.bx{border:1.5px solid #dbd6cb;border-radius:9px;background:#fcfbf8}
+.dsh{border:1.5px dashed #cfc9bc;border-radius:9px;background:#fdfcfa}
+.ln{height:7px;border-radius:4px;background:#e4e0d7}
+.row{display:flex;align-items:center;gap:8px}
+.col{display:flex;flex-direction:column}
+.sq{width:26px;height:26px;border:1.5px solid #cfc9bc;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;font:700 15px system-ui,sans-serif;color:#6f6a5f}
+.nav{flex:none;height:52px;border-top:1.5px solid #e0dbd0;display:flex;align-items:center;justify-content:space-around;padding:0 5px;background:#fcfbf8}
+.ni{display:flex;flex-direction:column;align-items:center;gap:3px;font:400 9px 'Kalam';color:#9d9789;text-align:center}
+.ni i{width:17px;height:17px;border:1.5px solid #c2bcae;border-radius:5px;display:block}
+.ni.on{color:#2C6E79}
+.ni.on i{border-color:#2C6E79;background:#dcedef}
+.fab{width:44px;height:44px;border-radius:50%;background:#2C6E79;display:flex;align-items:center;justify-content:center;font:400 26px/1 system-ui,sans-serif;color:#fff;margin-top:-20px;flex:none;box-shadow:0 2px 5px rgba(0,0,0,.18)}
+.chip{border:1.5px solid #d4cec1;border-radius:14px;padding:1px 9px 2px;font:400 10.5px 'Kalam';color:#5c574c;white-space:nowrap;flex:none}
+.chip.on{background:#2C6E79;border-color:#2C6E79;color:#fff}
+.ring{width:50px;height:50px;border-radius:50%;border:5px solid #e6e2d9;border-top-color:#2C6E79;border-right-color:#2C6E79;display:flex;align-items:center;justify-content:center;font:700 10.5px 'Kalam';color:#4d493f;flex:none}
+.tr{display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px dashed #ece8df}
+.dot{width:19px;height:19px;border-radius:50%;background:#ebe7de;flex:none}
+.amt{margin-left:auto;font:700 12.5px 'Kalam';color:#1c1c1c}
+.key{border:1.5px solid #e0dbd0;border-radius:8px;display:flex;align-items:center;justify-content:center;height:38px;font:600 16px system-ui,sans-serif;color:#3a3630;background:#fff}
+.btn{background:#2C6E79;color:#fff;border-radius:9px;height:42px;display:flex;align-items:center;justify-content:center;font:700 15px 'Kalam'}
+.rail{width:72px;flex:none;border-right:1.5px solid #e0dbd0;background:#fbfaf7;display:flex;flex-direction:column;align-items:center;gap:15px;padding:15px 0}
+.pane{flex:1;min-width:0;padding:16px;display:flex;flex-direction:column;gap:11px;overflow:hidden}
+.note{font:400 12px/1.4 'Kalam';color:#a8683f}
+.cal{width:34px;height:38px;border:1.5px dashed #cfc9bc;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:400 10.5px 'Kalam';color:#6f6a5f;flex:none}
+.cal.on{border-style:solid;border-color:#2C6E79;background:#dcedef;color:#1c4a52}
+.brand{font:700 12px 'Kalam';color:#2C6E79;letter-spacing:.03em}
+.av{width:44px;height:44px;border-radius:50%;border:1.5px dashed #cfc9bc;background:#fdfcfa;display:flex;align-items:center;justify-content:center;font:700 14px 'Kalam';color:#6f6a5f;flex:none}
+.fld{border:1.5px solid #d4cec1;border-radius:9px;height:40px;display:flex;align-items:center;gap:8px;padding:0 11px;font:400 12px 'Kalam';color:#8f8a7e;background:#fff}
+.fld.on{border-color:#2C6E79;color:#1c1c1c}
+.mrk{width:50px;height:50px;border-radius:14px;border:2px solid #1c1c1c;display:flex;align-items:center;justify-content:center;font:700 24px 'Kalam';color:#1c1c1c;flex:none}
+.srow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed #ece8df}
+.sw{width:32px;height:18px;border-radius:9px;background:#2C6E79;position:relative;flex:none}
+.sw i{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff;display:block}
+.sw.off{background:#dbd6cb}
+.sw.off i{right:auto;left:2px}
+.code{flex:1;height:44px;border:1.5px solid #d4cec1;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 19px 'Kalam';color:#1c1c1c}
+.step{flex:1;height:5px;border-radius:3px;background:#e4e0d7}
+.step.on{background:#2C6E79}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Five organising principles — Android phone and tablet</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+  <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Function tabs — one destination per job, the pattern people already know</div>
+  <div class="dv-card" style="width:1036px">
+    <div class="wrap">
+      <div class="frames">
+
+        <div><div class="fcap">Home</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="h1">Kinscope</div><div class="sq" style="margin-left:auto">+</div></div>
+            <div class="mut">All accounts</div>
+            <div class="big">$4,812.55</div>
+            <div class="row" style="gap:6px"><div class="chip on">Chequing</div><div class="chip">Savings</div><div class="chip">Business</div></div>
+            <div class="row" style="margin-top:4px"><div class="h2">Budgets</div><div class="mut" style="margin-left:auto">March</div></div>
+            <div class="row" style="justify-content:space-between">
+              <div class="col" style="align-items:center;gap:4px"><div class="ring">72%</div><div class="mut">Food</div></div>
+              <div class="col" style="align-items:center;gap:4px"><div class="ring">40%</div><div class="mut">Kids</div></div>
+              <div class="col" style="align-items:center;gap:4px"><div class="ring">91%</div><div class="mut">Fuel</div></div>
+            </div>
+            <div class="row" style="margin-top:4px"><div class="h2">Recent</div><div class="mut" style="margin-left:auto">See all</div></div>
+            <sc-for list="{{ r4 }}" as="r" hint-placeholder-count="4">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:62%"></div><div class="ln" style="width:34%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+          </div>
+          <div class="nav">
+            <div class="ni on"><i></i>Home</div><div class="ni"><i></i>Spend</div><div class="ni"><i></i>Budgets</div><div class="ni"><i></i>Goals</div><div class="ni"><i></i>Accounts</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Transactions</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="h1">Transactions</div><div class="sq" style="margin-left:auto">+</div></div>
+            <div class="dsh" style="height:32px;display:flex;align-items:center;padding:0 10px"><div class="mut">Search merchant, note, amount</div></div>
+            <div class="row" style="gap:6px"><div class="chip on">All</div><div class="chip">Chequing</div><div class="chip">Business</div><div class="chip">Food</div></div>
+            <div class="row"><div class="mut">March</div><div class="mut" style="margin-left:auto">$2,140 out · $3,010 in</div></div>
+            <div class="h2" style="margin-top:2px">Mon 18</div>
+            <sc-for list="{{ r3 }}" as="r" hint-placeholder-count="3">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:58%"></div><div class="ln" style="width:30%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+            <div class="h2" style="margin-top:4px">Sun 17</div>
+            <sc-for list="{{ r4 }}" as="r" hint-placeholder-count="4">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:66%"></div><div class="ln" style="width:26%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+          </div>
+          <div class="nav">
+            <div class="ni"><i></i>Home</div><div class="ni on"><i></i>Spend</div><div class="ni"><i></i>Budgets</div><div class="ni"><i></i>Goals</div><div class="ni"><i></i>Accounts</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Add transaction</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="mut">Cancel</div><div class="h2" style="margin:0 auto">Add</div><div class="mut">Save</div></div>
+            <div class="col" style="align-items:center;gap:2px;padding:14px 0 6px"><div class="big">$0.00</div><div class="mut">Expense · tap to switch</div></div>
+            <div class="row" style="gap:6px"><div class="chip on">Chequing</div><div class="chip">Savings</div><div class="chip">Business</div></div>
+            <div class="mut" style="margin-top:2px">Category</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+              <sc-for list="{{ r8 }}" as="r" hint-placeholder-count="8">
+                <div class="dsh" style="height:40px"></div>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:auto">
+              <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+                <div class="key">{{ k }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </div></div>
+
+      </div>
+      <sc-if value="{{ tablets }}" hint-placeholder-val="{{ true }}">
+      <div><div class="fcap">Tablet — nav rail plus one wide column</div><div class="tb">
+        <div class="rail">
+          <div class="ni on"><i></i>Home</div><div class="ni"><i></i>Spend</div><div class="ni"><i></i>Budget</div><div class="ni"><i></i>Goals</div><div class="ni"><i></i>Accts</div>
+        </div>
+        <div class="pane">
+          <div class="row"><div class="h1">Home</div><div class="mut" style="margin-left:auto">March · all accounts</div><div class="chip on">Add</div></div>
+          <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:12px;flex:1;min-height:0">
+            <div class="bx" style="padding:14px;display:flex;flex-direction:column;gap:8px">
+              <div class="mut">Total balance</div><div class="big">$4,812.55</div>
+              <div class="row" style="gap:6px"><div class="chip">Chequing</div><div class="chip">Savings</div><div class="chip">Business</div></div>
+              <div class="ln" style="height:56px;border-radius:7px;margin-top:4px"></div>
+            </div>
+            <div class="bx" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+              <div class="h2">Budgets</div>
+              <div class="row" style="justify-content:space-between">
+                <div class="col" style="align-items:center;gap:4px"><div class="ring">72%</div><div class="mut">Food</div></div>
+                <div class="col" style="align-items:center;gap:4px"><div class="ring">40%</div><div class="mut">Kids</div></div>
+                <div class="col" style="align-items:center;gap:4px"><div class="ring">91%</div><div class="mut">Fuel</div></div>
+                <div class="col" style="align-items:center;gap:4px"><div class="ring">55%</div><div class="mut">Home</div></div>
+              </div>
+              <div class="h2" style="margin-top:4px">Goals</div>
+              <div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div>
+            </div>
+            <div class="bx" style="padding:14px;grid-column:1 / -1;display:flex;flex-direction:column;gap:2px">
+              <div class="row"><div class="h2">Recent</div><div class="mut" style="margin-left:auto">See all</div></div>
+              <sc-for list="{{ r3 }}" as="r" hint-placeholder-count="3">
+                <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:32%"></div></div><div class="ln" style="width:90px"></div><div class="amt">−$00</div></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      </sc-if>
+      <sc-if value="{{ notes }}" hint-placeholder-val="{{ true }}">
+        <div class="note">Safest read of the space. Costs a tap to reach adding, and five tabs is the ceiling — debt payoff and insights have to live inside another tab.</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1b">
+  <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Capture first — a chronological feed, adding is the centre of the bar</div>
+  <div class="dv-card" style="width:1036px">
+    <div class="wrap">
+      <div class="frames">
+
+        <div><div class="fcap">Home — one feed</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="brand">kinscope</div>
+            <div class="row"><div class="h1">Today</div><div class="mut" style="margin-left:auto">Tue 19 March</div></div>
+            <div class="bx" style="padding:12px;display:flex;align-items:flex-end;gap:10px">
+              <div class="col" style="gap:2px"><div class="mut">Spent today</div><div class="mid">$42.10</div></div>
+              <div class="col" style="gap:4px;flex:1;margin-left:auto"><div class="ln" style="width:100%"></div><div class="mut">$68 left of today's allowance</div></div>
+            </div>
+            <div class="mut" style="margin-top:2px">Everything, newest first</div>
+            <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:58%"></div><div class="ln" style="width:30%;height:6px"></div></div><div class="amt">−$12</div></div>
+            <div class="bx" style="padding:10px 12px;border-left:4px solid #2C6E79"><div class="h2">Food budget at 91%</div><div class="mut">11 days left · tap to adjust</div></div>
+            <sc-for list="{{ r2 }}" as="r" hint-placeholder-count="2">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:64%"></div><div class="ln" style="width:28%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+            <div class="dsh" style="padding:10px 12px"><div class="h2">Hydro $118 due Friday</div><div class="mut">From Chequing · pay now</div></div>
+            <sc-for list="{{ r3 }}" as="r" hint-placeholder-count="3">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:52%"></div><div class="ln" style="width:34%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+          </div>
+          <div class="nav">
+            <div class="ni on"><i></i>Feed</div><div class="ni"><i></i>Budgets</div><div class="fab">+</div><div class="ni"><i></i>Goals</div><div class="ni"><i></i>More</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Transactions — same feed, filtered</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="h1">Spending</div><div class="sq" style="margin-left:auto">⌕</div></div>
+            <div class="row" style="gap:6px"><div class="chip on">All</div><div class="chip">Uncategorised 4</div><div class="chip">Business</div></div>
+            <div class="bx" style="padding:10px 12px;display:flex;align-items:center;gap:10px"><div class="col" style="gap:2px"><div class="mut">March out</div><div class="mid">$2,140</div></div><div class="ln" style="flex:1;height:34px;border-radius:6px"></div></div>
+            <sc-for list="{{ r7 }}" as="r" hint-placeholder-count="7">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:60%"></div><div class="ln" style="width:30%;height:6px"></div></div><div class="chip">Food</div><div class="amt">−$00</div></div>
+            </sc-for>
+            <div class="mut">Long-press a row to recategorise, swipe to undo</div>
+          </div>
+          <div class="nav">
+            <div class="ni"><i></i>Feed</div><div class="ni on"><i></i>Budgets</div><div class="fab">+</div><div class="ni"><i></i>Goals</div><div class="ni"><i></i>More</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Add — sheet from anywhere</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd" style="padding:0">
+            <div style="flex:1;background:#f4f2ee"></div>
+            <div style="border-top:2px solid #1c1c1c;border-radius:16px 16px 0 0;background:#fff;padding:14px 13px;display:flex;flex-direction:column;gap:10px">
+              <div class="ln" style="width:44px;height:5px;margin:0 auto"></div>
+              <div class="col" style="align-items:center;gap:2px"><div class="big">$0.00</div><div class="mut">Expense</div></div>
+              <div class="mut">Recent categories</div>
+              <div class="row" style="gap:6px;flex-wrap:wrap"><div class="chip on">Groceries</div><div class="chip">Fuel</div><div class="chip">Kids</div><div class="chip">Eating out</div><div class="chip">Supplies</div></div>
+              <div class="row" style="gap:6px"><div class="chip on">Chequing</div><div class="chip">Business</div></div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+                  <div class="key">{{ k }}</div>
+                </sc-for>
+              </div>
+              <div class="btn">Save</div>
+            </div>
+          </div>
+        </div></div>
+
+      </div>
+      <sc-if value="{{ tablets }}" hint-placeholder-val="{{ true }}">
+      <div><div class="fcap">Tablet — two pane, list left and the row you tapped on the right</div><div class="tb">
+        <div style="width:360px;flex:none;border-right:1.5px solid #e0dbd0;display:flex;flex-direction:column">
+          <div style="padding:14px 14px 10px;display:flex;flex-direction:column;gap:9px">
+            <div class="row"><div class="h1">Spending</div><div class="sq" style="margin-left:auto">+</div></div>
+            <div class="row" style="gap:6px"><div class="chip on">All</div><div class="chip">Chequing</div><div class="chip">Business</div></div>
+          </div>
+          <div style="flex:1;min-height:0;padding:0 14px;display:flex;flex-direction:column">
+            <sc-for list="{{ r8 }}" as="r" hint-placeholder-count="8">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:64%"></div><div class="ln" style="width:32%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="pane">
+          <div class="row"><div class="h2">Transaction</div><div class="mut" style="margin-left:auto">Mon 18 March · Chequing</div></div>
+          <div class="big">−$84.20</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="bx" style="padding:12px;display:flex;flex-direction:column;gap:6px"><div class="mut">Category</div><div class="row" style="gap:6px;flex-wrap:wrap"><div class="chip on">Groceries</div><div class="chip">Kids</div><div class="chip">Home</div></div></div>
+            <div class="bx" style="padding:12px;display:flex;flex-direction:column;gap:6px"><div class="mut">Account</div><div class="row" style="gap:6px"><div class="chip on">Chequing</div><div class="chip">Business</div></div></div>
+            <div class="bx" style="padding:12px;display:flex;flex-direction:column;gap:7px;grid-column:1 / -1"><div class="mut">Note and receipt</div><div class="ln" style="width:70%"></div><div class="dsh" style="height:52px"></div></div>
+          </div>
+          <div class="row" style="gap:8px;margin-top:auto"><div class="chip">Split</div><div class="chip">Make recurring</div><div class="chip">Move to Business</div><div class="btn" style="margin-left:auto;width:110px">Save</div></div>
+        </div>
+      </div></div>
+      </sc-if>
+      <sc-if value="{{ notes }}" hint-placeholder-val="{{ true }}">
+        <div class="note">Best if the daily job is logging and glancing. The feed mixes transactions, alerts and bills, which is either the whole point or too noisy — worth testing on a real week.</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1c">
+  <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Account first — the top level is which account, not which function</div>
+  <div class="dv-card" style="width:1036px">
+    <div class="wrap">
+      <div class="frames">
+
+        <div><div class="fcap">Home — swipeable account cards</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="brand">kinscope</div>
+            <div class="row"><div class="h1">Accounts</div><div class="mut" style="margin-left:auto">swipe →</div></div>
+            <div style="overflow:hidden;margin:0 -13px;padding:0 13px">
+              <div style="display:flex;gap:10px;width:470px">
+                <div class="bx" style="width:236px;flex:none;padding:13px;display:flex;flex-direction:column;gap:7px;border-color:#2C6E79">
+                  <div class="mut">Chequing · joint</div>
+                  <div class="big">$2,410.08</div>
+                  <div class="mut">$68 safe to spend today</div>
+                  <div class="row" style="gap:3px;align-items:flex-end;height:44px;margin-top:2px">
+                    <sc-for list="{{ r7 }}" as="r" hint-placeholder-count="7">
+                      <div class="ln" style="flex:1;height:100%;border-radius:3px"></div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div class="bx" style="width:236px;flex:none;padding:13px;display:flex;flex-direction:column;gap:7px">
+                  <div class="mut">Savings</div><div class="big">$1,902</div>
+                </div>
+              </div>
+            </div>
+            <div class="row" style="justify-content:center;gap:5px">
+              <div style="width:7px;height:7px;border-radius:50%;background:#2C6E79"></div>
+              <div style="width:7px;height:7px;border-radius:50%;background:#dbd6cb"></div>
+              <div style="width:7px;height:7px;border-radius:50%;background:#dbd6cb"></div>
+            </div>
+            <div class="row" style="margin-top:2px"><div class="h2">This account</div><div class="mut" style="margin-left:auto">Chequing</div></div>
+            <div class="row" style="gap:14px">
+              <div class="col" style="align-items:center;gap:4px"><div class="ring">72%</div><div class="mut">Food</div></div>
+              <div class="col" style="align-items:center;gap:4px"><div class="ring">91%</div><div class="mut">Fuel</div></div>
+              <div class="col" style="gap:5px;flex:1"><div class="mut">Goal · Van fund</div><div class="ln" style="width:100%"></div><div class="mut">$1,200 of $4,000</div></div>
+            </div>
+            <sc-for list="{{ r4 }}" as="r" hint-placeholder-count="4">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:60%"></div><div class="ln" style="width:30%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+          </div>
+          <div class="nav">
+            <div class="ni on"><i></i>Accounts</div><div class="ni"><i></i>Budgets</div><div class="ni"><i></i>Goals</div><div class="ni"><i></i>More</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Transactions — scoped, switcher pinned</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="h1">Transactions</div>
+            <div class="row" style="gap:0;border:1.5px solid #d4cec1;border-radius:9px;overflow:hidden">
+              <div style="flex:1;text-align:center;padding:5px 0;background:#2C6E79;color:#fff;font:700 11px 'Kalam'">Chequing</div>
+              <div style="flex:1;text-align:center;padding:5px 0;font:400 11px 'Kalam';color:#5c574c;border-left:1.5px solid #d4cec1">Savings</div>
+              <div style="flex:1;text-align:center;padding:5px 0;font:400 11px 'Kalam';color:#5c574c;border-left:1.5px solid #d4cec1">Business</div>
+            </div>
+            <div class="row"><div class="mut">March</div><div class="mut" style="margin-left:auto">$1,480 out</div></div>
+            <div class="h2" style="margin-top:2px">Mon 18</div>
+            <sc-for list="{{ r4 }}" as="r" hint-placeholder-count="4">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:58%"></div><div class="ln" style="width:32%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+            <div class="h2" style="margin-top:4px">Sun 17</div>
+            <sc-for list="{{ r5 }}" as="r" hint-placeholder-count="5">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:64%"></div><div class="ln" style="width:26%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+            <div class="mut">Business rows never mix into personal totals</div>
+          </div>
+          <div class="nav">
+            <div class="ni on"><i></i>Accounts</div><div class="ni"><i></i>Budgets</div><div class="ni"><i></i>Goals</div><div class="ni"><i></i>More</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Add — account before amount</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="mut">Cancel</div><div class="h2" style="margin:0 auto">Add</div><div class="mut" style="color:#c8c2b6">Save</div></div>
+            <div class="mut" style="margin-top:4px">Step 1 · which account?</div>
+            <div class="dsh" style="padding:13px;border-color:#2C6E79;background:#f2f8f9;display:flex;flex-direction:column;gap:3px"><div class="h2">Chequing · joint</div><div class="mut">$2,410.08</div></div>
+            <div class="dsh" style="padding:13px;display:flex;flex-direction:column;gap:3px"><div class="h2">Savings</div><div class="mut">$1,902.00</div></div>
+            <div class="dsh" style="padding:13px;display:flex;flex-direction:column;gap:3px"><div class="h2">Business</div><div class="mut">$500.47</div></div>
+            <div class="mut" style="margin-top:8px">Step 2 · amount</div>
+            <div class="col" style="align-items:center;gap:2px;opacity:.35"><div class="big">$0.00</div></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:auto;opacity:.35">
+              <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+                <div class="key">{{ k }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </div></div>
+
+      </div>
+      <sc-if value="{{ tablets }}" hint-placeholder-val="{{ true }}">
+      <div><div class="fcap">Tablet — no swiping, all three accounts at once</div><div class="tb">
+        <div class="pane">
+          <div class="row"><div class="h1">Accounts</div><div class="mut" style="margin-left:auto">March</div><div class="chip on">Add</div></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;flex:1;min-height:0">
+            <sc-for list="{{ accounts }}" as="a" hint-placeholder-count="3">
+              <div class="bx" style="padding:13px;display:flex;flex-direction:column;gap:8px;min-height:0">
+                <div class="mut">{{ a.name }}</div>
+                <div class="mid">{{ a.bal }}</div>
+                <div class="row" style="gap:3px;align-items:flex-end;height:40px">
+                  <sc-for list="{{ r7 }}" as="r" hint-placeholder-count="7">
+                    <div class="ln" style="flex:1;height:100%;border-radius:3px"></div>
+                  </sc-for>
+                </div>
+                <div class="row" style="gap:10px"><div class="ring" style="width:40px;height:40px;border-width:4px">72%</div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:80%"></div><div class="ln" style="width:55%"></div></div></div>
+                <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+                  <sc-for list="{{ r4 }}" as="r" hint-placeholder-count="4">
+                    <div class="tr"><div class="dot"></div><div class="ln" style="width:46%"></div><div class="amt">−$00</div></div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div></div>
+      </sc-if>
+      <sc-if value="{{ notes }}" hint-placeholder-val="{{ true }}">
+        <div class="note">The one direction that solves personal-versus-business at the top level rather than with a filter. Cost: cross-account questions ("what did we spend on food?") need their own place.</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1d">
+  <div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Answers, not dashboards — home is questions with a one-line reply</div>
+  <div class="dv-card" style="width:1036px">
+    <div class="wrap">
+      <div class="frames">
+
+        <div><div class="fcap">Home — one number, three questions</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="brand">kinscope</div><div class="mut" style="margin-left:auto">Tuesday 19 March</div><div class="sq">☰</div></div>
+            <div class="col" style="gap:3px;padding:16px 0 10px">
+              <div class="mut">Safe to spend today</div>
+              <div style="font:700 52px/.9 'Kalam';color:#1c1c1c">$68</div>
+              <div class="mut">after bills, budgets and the van fund</div>
+            </div>
+            <sc-for list="{{ answers }}" as="q" hint-placeholder-count="3">
+              <div class="bx" style="padding:13px;display:flex;align-items:center;gap:10px">
+                <div class="col" style="gap:4px;flex:1"><div class="h2">{{ q.q }}</div><div class="mut">{{ q.a }}</div></div>
+                <div class="mut">›</div>
+              </div>
+            </sc-for>
+            <div class="dsh" style="padding:12px;display:flex;align-items:center;gap:10px"><div class="col" style="gap:3px;flex:1"><div class="h2">Debt free in 3 yr 2 mo</div><div class="mut">Van loan · $312 a month</div></div><div class="mut">›</div></div>
+            <div class="mut" style="margin-top:2px">Everything else lives one level down</div>
+          </div>
+          <div class="nav">
+            <div class="ni on"><i></i>Today</div><div class="ni"><i></i>Money</div><div class="ni"><i></i>More</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Transactions — grouped by what needs you</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="h1">Money</div><div class="sq" style="margin-left:auto">⌕</div></div>
+            <div class="bx" style="padding:12px;display:flex;flex-direction:column;gap:7px;border-color:#2C6E79">
+              <div class="row"><div class="h2">Needs a look</div><div class="chip on" style="margin-left:auto">3</div></div>
+              <sc-for list="{{ r3 }}" as="r" hint-placeholder-count="3">
+                <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:56%"></div><div class="ln" style="width:38%;height:6px"></div></div><div class="amt">−$00</div></div>
+              </sc-for>
+              <div class="mut">Unusual amount, no category, or a new merchant</div>
+            </div>
+            <div class="bx" style="padding:12px;display:flex;flex-direction:column;gap:6px">
+              <div class="row"><div class="h2">Recurring</div><div class="mut" style="margin-left:auto">8 · $1,104 a month</div></div>
+              <sc-for list="{{ r3 }}" as="r" hint-placeholder-count="3">
+                <div class="tr"><div class="dot"></div><div class="ln" style="width:50%"></div><div class="amt">−$00</div></div>
+              </sc-for>
+            </div>
+            <div class="bx" style="padding:12px;display:flex;flex-direction:column;gap:6px;flex:1;min-height:0">
+              <div class="row"><div class="h2">Everything else</div><div class="mut" style="margin-left:auto">142</div></div>
+              <sc-for list="{{ r3 }}" as="r" hint-placeholder-count="3">
+                <div class="tr"><div class="dot"></div><div class="ln" style="width:58%"></div><div class="amt">−$00</div></div>
+              </sc-for>
+            </div>
+          </div>
+          <div class="nav">
+            <div class="ni"><i></i>Today</div><div class="ni on"><i></i>Money</div><div class="ni"><i></i>More</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Add — type it in words</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="mut">Cancel</div><div class="h2" style="margin:0 auto">Add</div><div class="mut">Save</div></div>
+            <div class="bx" style="padding:14px;margin-top:10px;border-color:#2C6E79"><div style="font:700 21px/1.2 'Kalam';color:#1c1c1c">12.40 coffee chequing</div></div>
+            <div class="mut">Understood as</div>
+            <div class="row" style="gap:6px;flex-wrap:wrap"><div class="chip on">$12.40</div><div class="chip on">Eating out</div><div class="chip on">Chequing</div><div class="chip">Today</div></div>
+            <div class="mut" style="margin-top:6px">Tap any chip to correct it</div>
+            <div class="dsh" style="padding:11px;display:flex;align-items:center;gap:9px"><div class="sq">🎙</div><div class="mut">Or hold to dictate</div></div>
+            <div class="btn" style="margin-top:6px">Save</div>
+            <div class="mut" style="margin-top:10px">Recent, tap to repeat</div>
+            <sc-for list="{{ r3 }}" as="r" hint-placeholder-count="3">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:54%"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+          </div>
+        </div></div>
+
+      </div>
+      <sc-if value="{{ tablets }}" hint-placeholder-val="{{ true }}">
+      <div><div class="fcap">Tablet — the answers open up instead of drilling down</div><div class="tb">
+        <div class="pane">
+          <div class="row" style="align-items:flex-end">
+            <div class="col" style="gap:2px"><div class="mut">Safe to spend today</div><div style="font:700 44px/.9 'Kalam'">$68</div></div>
+            <div class="mut" style="margin-left:auto">Tuesday 19 March</div><div class="chip on">Add</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:12px;flex:1;min-height:0">
+            <sc-for list="{{ answers6 }}" as="q" hint-placeholder-count="6">
+              <div class="bx" style="padding:13px;display:flex;flex-direction:column;gap:7px;min-height:0">
+                <div class="h2">{{ q.q }}</div><div class="mut">{{ q.a }}</div>
+                <div class="ln" style="width:100%;height:34px;border-radius:6px;margin-top:2px"></div>
+                <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+                  <sc-for list="{{ r2 }}" as="r" hint-placeholder-count="2">
+                    <div class="tr"><div class="dot"></div><div class="ln" style="width:46%"></div><div class="amt">$00</div></div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div></div>
+      </sc-if>
+      <sc-if value="{{ notes }}" hint-placeholder-val="{{ true }}">
+        <div class="note">Least like a bank app, most opinionated. It only works if the safe-to-spend maths is trustworthy — get that wrong once and the whole screen loses credibility.</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1e">
+  <div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Calendar spine — money organised by when, not by category</div>
+  <div class="dv-card" style="width:1036px">
+    <div class="wrap">
+      <div class="frames">
+
+        <div><div class="fcap">Home — the month as a spine</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="brand">kinscope</div>
+            <div class="row"><div class="h1">March</div><div class="row" style="margin-left:auto;gap:6px"><div class="sq">‹</div><div class="sq">›</div></div></div>
+            <div class="row" style="gap:5px;overflow:hidden">
+              <sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
+                <div class="cal">{{ d }}</div>
+              </sc-for>
+            </div>
+            <div class="row"><div class="mut">Projected end of month</div><div class="mid" style="margin-left:auto;font-size:19px">$1,940</div></div>
+            <div class="h2" style="margin-top:2px">Tue 19 · today</div>
+            <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:56%"></div><div class="ln" style="width:30%;height:6px"></div></div><div class="amt">−$12</div></div>
+            <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:48%"></div></div><div class="amt">−$30</div></div>
+            <div class="h2" style="margin-top:4px">Fri 22</div>
+            <div class="tr" style="background:#f2f8f9"><div class="dot" style="background:#bcdde1"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:44%"></div><div class="ln" style="width:30%;height:6px"></div></div><div class="amt">−$118</div></div>
+            <div class="tr"><div class="dot"></div><div class="ln" style="width:40%"></div><div class="amt">+$1,420</div></div>
+            <div class="h2" style="margin-top:4px">Mon 25</div>
+            <sc-for list="{{ r3 }}" as="r" hint-placeholder-count="3">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:52%"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+            <div class="mut">Bills and pay show before they happen</div>
+          </div>
+          <div class="nav">
+            <div class="ni on"><i></i>Calendar</div><div class="ni"><i></i>Spend</div><div class="ni"><i></i>Budgets</div><div class="ni"><i></i>More</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Transactions — a single day</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="sq">‹</div><div class="h1" style="margin:0 auto">Fri 22 March</div><div class="sq">›</div></div>
+            <div class="row" style="gap:8px">
+              <div class="bx" style="flex:1;padding:10px;display:flex;flex-direction:column;gap:2px"><div class="mut">In</div><div class="mid" style="font-size:20px">$1,420</div></div>
+              <div class="bx" style="flex:1;padding:10px;display:flex;flex-direction:column;gap:2px"><div class="mut">Out</div><div class="mid" style="font-size:20px">$186</div></div>
+              <div class="bx" style="flex:1;padding:10px;display:flex;flex-direction:column;gap:2px"><div class="mut">Balance</div><div class="mid" style="font-size:20px">$3,644</div></div>
+            </div>
+            <div class="h2" style="margin-top:4px">Scheduled</div>
+            <div class="tr" style="background:#f2f8f9"><div class="dot" style="background:#bcdde1"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:46%"></div><div class="ln" style="width:32%;height:6px"></div></div><div class="amt">−$118</div></div>
+            <div class="tr"><div class="dot"></div><div class="ln" style="width:38%"></div><div class="amt">+$1,420</div></div>
+            <div class="h2" style="margin-top:4px">Happened</div>
+            <sc-for list="{{ r5 }}" as="r" hint-placeholder-count="5">
+              <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:58%"></div><div class="ln" style="width:28%;height:6px"></div></div><div class="amt">−$00</div></div>
+            </sc-for>
+            <div class="dsh" style="padding:11px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px"><div class="mut">+ Add to this day</div></div>
+          </div>
+          <div class="nav">
+            <div class="ni on"><i></i>Calendar</div><div class="ni"><i></i>Spend</div><div class="ni"><i></i>Budgets</div><div class="ni"><i></i>More</div>
+          </div>
+        </div></div>
+
+        <div><div class="fcap">Add — date first</div><div class="ph">
+          <div class="sb"><span>9:41</span><span>▪▪▪ ▮</span></div>
+          <div class="bd">
+            <div class="row"><div class="mut">Cancel</div><div class="h2" style="margin:0 auto">Add</div><div class="mut">Save</div></div>
+            <div class="mut" style="margin-top:4px">When</div>
+            <div class="row" style="gap:5px;overflow:hidden">
+              <sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
+                <div class="cal">{{ d }}</div>
+              </sc-for>
+            </div>
+            <div class="row" style="gap:6px"><div class="chip on">One off</div><div class="chip">Every month</div><div class="chip">Every 2 weeks</div></div>
+            <div class="col" style="align-items:center;gap:2px;padding:10px 0 4px"><div class="big">$0.00</div><div class="mut">Expense · tap to switch</div></div>
+            <div class="row" style="gap:6px"><div class="chip on">Chequing</div><div class="chip">Savings</div><div class="chip">Business</div></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:auto">
+              <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+                <div class="key">{{ k }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </div></div>
+
+      </div>
+      <sc-if value="{{ tablets }}" hint-placeholder-val="{{ true }}">
+      <div><div class="fcap">Tablet — full month left, the day you picked right</div><div class="tb">
+        <div style="flex:1;min-width:0;padding:16px;display:flex;flex-direction:column;gap:10px;border-right:1.5px solid #e0dbd0">
+          <div class="row"><div class="h1">March</div><div class="row" style="margin-left:auto;gap:6px"><div class="sq">‹</div><div class="sq">›</div></div></div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;flex:1;min-height:0">
+            <sc-for list="{{ month }}" as="d" hint-placeholder-count="35">
+              <div class="dsh" style="display:flex;flex-direction:column;gap:4px;padding:5px;min-height:0"><div class="mut" style="font-size:11px">{{ d }}</div><div class="ln" style="width:70%;height:5px"></div><div class="ln" style="width:45%;height:5px"></div></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="width:330px;flex:none;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div class="h1">Fri 22</div>
+          <div class="row" style="gap:8px"><div class="bx" style="flex:1;padding:9px"><div class="mut">Out</div><div class="mid" style="font-size:19px">$186</div></div><div class="bx" style="flex:1;padding:9px"><div class="mut">Balance</div><div class="mid" style="font-size:19px">$3,644</div></div></div>
+          <div class="h2">Scheduled</div>
+          <div class="tr" style="background:#f2f8f9"><div class="dot" style="background:#bcdde1"></div><div class="ln" style="width:44%"></div><div class="amt">−$118</div></div>
+          <div class="h2" style="margin-top:2px">Happened</div>
+          <sc-for list="{{ r4 }}" as="r" hint-placeholder-count="4">
+            <div class="tr"><div class="dot"></div><div class="col" style="gap:5px;flex:1"><div class="ln" style="width:58%"></div></div><div class="amt">−$00</div></div>
+          </sc-for>
+          <div class="dsh" style="padding:10px;display:flex;justify-content:center;margin-top:auto"><div class="mut">+ Add to this day</div></div>
+        </div>
+      </div></div>
+      </sc-if>
+      <sc-if value="{{ notes }}" hint-placeholder-val="{{ true }}">
+        <div class="note">Strongest for a household running on pay cycles and due dates — it makes the debt payments and bills impossible to miss. Weakest for category questions.</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "build out the other six screens in <a class="dv-oid" href="#1c">1c</a>" · "cross <a class="dv-oid" href="#1d">1d</a>'s home with <a class="dv-oid" href="#1a">1a</a>'s tabs" · "more tablet options for <a class="dv-oid" href="#1b">1b</a>"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;notes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Wireframe display&quot;},&quot;tablets&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Wireframe display&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const seq = n => Array.from({ length: n }, (_, i) => i);
+    return {
+      notes: this.props.notes ?? true,
+      tablets: this.props.tablets ?? true,
+      r2: seq(2), r3: seq(3), r4: seq(4), r5: seq(5), r6: seq(6), r7: seq(7), r8: seq(8),
+      keys: ['1','2','3','4','5','6','7','8','9','.','0','⌫'],
+      week: ['17','18','19','20','21','22','23'],
+      month: Array.from({ length: 35 }, (_, i) => String(i - 3)).map(n => (+n > 0 && +n < 32) ? n : ''),
+      accounts: [
+        { name: 'Chequing · joint', bal: '$2,410.08' },
+        { name: 'Savings', bal: '$1,902.00' },
+        { name: 'Business', bal: '$500.47' }
+      ],
+      answers: [
+        { q: "What's due this week?", a: '$318 across 3 bills · Hydro is the big one' },
+        { q: 'Am I on track?', a: '2 of 6 budgets are tight, the rest have room' },
+        { q: 'What changed?', a: 'Groceries up $40 on February' }
+      ],
+      answers6: [
+        { q: "What's due this week?", a: '$318 across 3 bills' },
+        { q: 'Am I on track?', a: '2 of 6 budgets tight' },
+        { q: 'What changed?', a: 'Groceries up $40 on Feb' },
+        { q: 'Where did it go?', a: 'Food, fuel and kids are 61%' },
+        { q: 'Are the goals moving?', a: 'Van fund $1,200 of $4,000' },
+        { q: 'When is the debt gone?', a: '3 yr 2 mo at $312 a month' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
