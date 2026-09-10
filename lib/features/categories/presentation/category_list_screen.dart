@@ -176,8 +176,9 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                           icon: const Icon(LucideIcons.moreVertical),
                           onSelected: (value) {
                             if (value == 'edit') _editCategory(category);
-                            if (value == 'remove')
+                            if (value == 'remove') {
                               _deactivateCategory(category);
+                            }
                           },
                           itemBuilder: (context) => const [
                             PopupMenuItem(value: 'edit', child: Text('Edit')),

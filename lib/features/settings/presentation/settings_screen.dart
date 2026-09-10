@@ -1,16 +1,26 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../../core/export/transactions_csv.dart';
+import '../../../core/models/account.dart';
+import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/models/transaction.dart' as model;
 import '../../../core/notifications/reminder_service.dart';
 import '../../../core/security/pin_setup_screen.dart';
 import '../../../core/security/pin_vault.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../main.dart';
+import '../../accounts/data/account_repository.dart';
 import '../../accounts/presentation/account_list_screen.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../budgets/data/budget_repository.dart';
+import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_list_screen.dart';
 import '../../profiles/presentation/profile_list_screen.dart';
 import '../../transactions/data/transaction_repository.dart';
@@ -20,6 +30,8 @@ class SettingsScreen extends StatefulWidget {
   final AuthRepository authRepository;
   final TransactionRepository transactionRepository;
   final BudgetRepository budgetRepository;
+  final CategoryRepository categoryRepository;
+  final AccountRepository accountRepository;
 
   /// Called after returning from a screen that may have changed data other
   /// tabs depend on (categories, accounts), so the shell can refresh them.
@@ -32,9 +44,13 @@ class SettingsScreen extends StatefulWidget {
     this.onDataChanged,
     TransactionRepository? transactionRepository,
     BudgetRepository? budgetRepository,
+    CategoryRepository? categoryRepository,
+    AccountRepository? accountRepository,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
-       budgetRepository = budgetRepository ?? SupabaseBudgetRepository();
+       budgetRepository = budgetRepository ?? SupabaseBudgetRepository(),
+       categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
+       accountRepository = accountRepository ?? SupabaseAccountRepository();
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -42,6 +58,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _resetting = false;
+  bool _exporting = false;
   bool _hasPin = false;
   bool _reminderEnabled = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
@@ -113,6 +130,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
       MaterialPageRoute(builder: (_) => AuthGate()),
       (route) => false,
     );
+  }
+
+  Future<void> _exportCsv() async {
+    setState(() => _exporting = true);
+    try {
+      final results = await Future.wait([
+        widget.transactionRepository.listTransactions(widget.profile.id),
+        widget.categoryRepository.listActiveCategories(widget.profile.id),
+        widget.accountRepository.listActiveAccounts(widget.profile.id),
+      ]);
+      final transactions = results[0] as List<model.Transaction>;
+      final categories = results[1] as List<Category>;
+      final accounts = results[2] as List<Account>;
+
+      final csv = buildTransactionsCsv(
+        transactions: transactions,
+        categoriesById: {for (final c in categories) c.id: c},
+        accountsById: {for (final a in accounts) a.id: a},
+      );
+
+      final dir = await getTemporaryDirectory();
+      final safeName = widget.profile.displayName.replaceAll(
+        RegExp(r'[^A-Za-z0-9]+'),
+        '_',
+      );
+      final file = File('${dir.path}/kinscope_${safeName}_transactions.csv');
+      await file.writeAsString(csv);
+
+      if (!mounted) return;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'text/csv')],
+          subject: 'Kinscope transactions — ${widget.profile.displayName}',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   Future<void> _confirmResetData() async {
@@ -287,6 +342,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
               .animate()
               .fadeIn(delay: 40.ms, duration: 300.ms)
               .slideY(begin: 0.05, end: 0),
+        const SizedBox(height: 16),
+        Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: _exporting
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(LucideIcons.download),
+                title: const Text('Export data'),
+                subtitle: const Text('Share all transactions as a CSV file'),
+                onTap: _exporting ? null : _exportCsv,
+              ),
+            )
+            .animate()
+            .fadeIn(delay: 60.ms, duration: 300.ms)
+            .slideY(begin: 0.05, end: 0),
         const SizedBox(height: 16),
         Card(
               margin: EdgeInsets.zero,
