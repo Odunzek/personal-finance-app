@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/widgets/kinscope_logo.dart';
+import '../../../core/widgets/mural_background.dart';
 import '../data/auth_repository.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -73,84 +74,90 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Center(child: KinscopeLogo(width: 160))
-                        .animate()
-                        .fadeIn(duration: 400.ms)
-                        .scale(begin: const Offset(0.9, 0.9)),
-                    const SizedBox(height: 40),
-                    Text(
-                      _isSignUp ? 'Create your account' : 'Welcome back',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w600),
-                    ).animate().fadeIn(delay: 100.ms, duration: 300.ms),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(LucideIcons.mail),
-                      ),
-                      validator: (value) => (value == null || !value.contains('@'))
-                          ? 'Enter a valid email'
-                          : null,
-                    ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      autofillHints: const [AutofillHints.password],
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: Icon(LucideIcons.lockKeyhole),
-                      ),
-                      validator: (value) => (value == null || value.length < 6)
-                          ? 'At least 6 characters'
-                          : null,
-                    ).animate().fadeIn(delay: 200.ms, duration: 300.ms),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 16),
+        child: MuralBackground(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Center(child: KinscopeLogo(width: 160))
+                          .animate()
+                          .fadeIn(duration: 400.ms)
+                          .scale(begin: const Offset(0.9, 0.9)),
+                      const SizedBox(height: 40),
                       Text(
-                        _errorMessage!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                        _isSignUp ? 'Create your account' : 'Welcome back',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ).animate().fadeIn(delay: 100.ms, duration: 300.ms),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(LucideIcons.mail),
+                        ),
+                        validator: (value) =>
+                            (value == null || !value.contains('@'))
+                            ? 'Enter a valid email'
+                            : null,
+                      ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        autofillHints: const [AutofillHints.password],
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(LucideIcons.lockKeyhole),
+                        ),
+                        validator: (value) =>
+                            (value == null || value.length < 6)
+                            ? 'At least 6 characters'
+                            : null,
+                      ).animate().fadeIn(delay: 200.ms, duration: 300.ms),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _submit,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(_isSignUp ? 'Sign up' : 'Sign in'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => setState(() => _isSignUp = !_isSignUp),
+                        child: Text(
+                          _isSignUp
+                              ? 'Already have an account? Sign in'
+                              : "Don't have an account? Sign up",
                         ),
                       ),
                     ],
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(_isSignUp ? 'Sign up' : 'Sign in'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => setState(() => _isSignUp = !_isSignUp),
-                      child: Text(
-                        _isSignUp
-                            ? 'Already have an account? Sign in'
-                            : "Don't have an account? Sign up",
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

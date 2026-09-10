@@ -7,6 +7,7 @@ import '../../../core/notifications/reminder_service.dart';
 import '../../../core/security/pin_setup_screen.dart';
 import '../../../core/security/pin_vault.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../main.dart';
 import '../../accounts/presentation/account_list_screen.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../budgets/data/budget_repository.dart';
@@ -74,7 +75,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _toggleReminder(bool enabled) async {
     if (enabled) {
-      final picked = await showTimePicker(context: context, initialTime: _reminderTime);
+      final picked = await showTimePicker(
+        context: context,
+        initialTime: _reminderTime,
+      );
       if (picked == null) return;
       await ReminderService.instance.setReminder(picked);
       setState(() {
@@ -89,10 +93,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _changeReminderTime() async {
     if (!_reminderEnabled) return;
-    final picked = await showTimePicker(context: context, initialTime: _reminderTime);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime,
+    );
     if (picked == null) return;
     await ReminderService.instance.setReminder(picked);
     setState(() => _reminderTime = picked);
+  }
+
+  Future<void> _signOut() async {
+    await widget.authRepository.signOut();
+    if (!mounted) return;
+    // Sign-out happens from deep inside MainShell's navigation stack, below
+    // which AuthGate's route was already popped when the profile was first
+    // opened (pushAndRemoveUntil) — so nothing is left listening to the auth
+    // stream to bring back the sign-in screen. Rebuild it explicitly.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => AuthGate()),
+      (route) => false,
+    );
   }
 
   Future<void> _confirmResetData() async {
@@ -166,7 +186,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CategoryListScreen(profile: widget.profile),
+                      builder: (_) =>
+                          CategoryListScreen(profile: widget.profile),
                     ),
                   );
                   widget.onDataChanged?.call();
@@ -179,7 +200,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => AccountListScreen(profile: widget.profile),
+                      builder: (_) =>
+                          AccountListScreen(profile: widget.profile),
                     ),
                   );
                   widget.onDataChanged?.call();
@@ -199,11 +221,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 Brightness.dark);
                     return SegmentedButton<ThemeMode>(
                       segments: const [
-                        ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                        ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text('Light'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text('Dark'),
+                        ),
                       ],
-                      selected: {effectiveIsDark ? ThemeMode.dark : ThemeMode.light},
-                      onSelectionChanged: (s) => themeModeNotifier.value = s.first,
+                      selected: {
+                        effectiveIsDark ? ThemeMode.dark : ThemeMode.light,
+                      },
+                      onSelectionChanged: (s) =>
+                          themeModeNotifier.value = s.first,
                     );
                   },
                 ),
@@ -224,63 +255,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 16),
         if (_loadedSecurityState)
           Card(
-            margin: EdgeInsets.zero,
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(LucideIcons.lock),
-                  title: const Text('App lock'),
-                  subtitle: Text(_hasPin ? 'On · PIN required to open the app' : 'Off'),
-                  onTap: _openAppLock,
+                margin: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(LucideIcons.lock),
+                      title: const Text('App lock'),
+                      subtitle: Text(
+                        _hasPin ? 'On · PIN required to open the app' : 'Off',
+                      ),
+                      onTap: _openAppLock,
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(LucideIcons.bellRing),
+                      title: const Text('Daily reminder'),
+                      subtitle: Text(
+                        _reminderEnabled
+                            ? 'On · ${_reminderTime.format(context)} · tap to change'
+                            : 'Off · nudges you to log today\'s spending',
+                      ),
+                      onTap: _reminderEnabled ? _changeReminderTime : null,
+                      trailing: Switch(
+                        value: _reminderEnabled,
+                        onChanged: _toggleReminder,
+                      ),
+                    ),
+                  ],
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(LucideIcons.bellRing),
-                  title: const Text('Daily reminder'),
-                  subtitle: Text(
-                    _reminderEnabled
-                        ? 'On · ${_reminderTime.format(context)} · tap to change'
-                        : 'Off · nudges you to log today\'s spending',
-                  ),
-                  onTap: _reminderEnabled ? _changeReminderTime : null,
-                  trailing: Switch(
-                    value: _reminderEnabled,
-                    onChanged: _toggleReminder,
-                  ),
-                ),
-              ],
-            ),
-          ).animate().fadeIn(delay: 40.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
+              )
+              .animate()
+              .fadeIn(delay: 40.ms, duration: 300.ms)
+              .slideY(begin: 0.05, end: 0),
         const SizedBox(height: 16),
         Card(
-          margin: EdgeInsets.zero,
-          child: ListTile(
-            leading: _resetting
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(
-                    LucideIcons.rotateCcw,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-            title: const Text('Reset data'),
-            subtitle: const Text('Clear all transactions, budgets, and goals'),
-            textColor: Theme.of(context).colorScheme.error,
-            onTap: _resetting ? null : _confirmResetData,
-          ),
-        ).animate().fadeIn(delay: 80.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: _resetting
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        LucideIcons.rotateCcw,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                title: const Text('Reset data'),
+                subtitle: const Text(
+                  'Clear all transactions, budgets, and goals',
+                ),
+                textColor: Theme.of(context).colorScheme.error,
+                onTap: _resetting ? null : _confirmResetData,
+              ),
+            )
+            .animate()
+            .fadeIn(delay: 80.ms, duration: 300.ms)
+            .slideY(begin: 0.05, end: 0),
         const SizedBox(height: 16),
         Card(
-          margin: EdgeInsets.zero,
-          child: ListTile(
-            leading: Icon(LucideIcons.logOut, color: Theme.of(context).colorScheme.error),
-            title: const Text('Sign out'),
-            textColor: Theme.of(context).colorScheme.error,
-            onTap: widget.authRepository.signOut,
-          ),
-        ).animate().fadeIn(delay: 120.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: Icon(
+                  LucideIcons.logOut,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: const Text('Sign out'),
+                textColor: Theme.of(context).colorScheme.error,
+                onTap: _signOut,
+              ),
+            )
+            .animate()
+            .fadeIn(delay: 120.ms, duration: 300.ms)
+            .slideY(begin: 0.05, end: 0),
       ],
     );
 
