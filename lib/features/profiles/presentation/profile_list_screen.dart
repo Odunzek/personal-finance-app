@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/models/account.dart';
 import '../../../core/models/default_categories.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/widgets/mural_background.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../categories/data/category_repository.dart';
@@ -126,10 +127,8 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
   void _openProfile(Profile profile) {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (context) => MainShell(
-          profile: profile,
-          authRepository: widget.authRepository,
-        ),
+        builder: (context) =>
+            MainShell(profile: profile, authRepository: widget.authRepository),
       ),
       (route) => false,
     );
@@ -152,101 +151,117 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
         onPressed: _createProfile,
         child: const Icon(LucideIcons.plus),
       ),
-      body: FutureBuilder<List<Profile>>(
-        future: _profilesFuture,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final profiles = snapshot.data!;
-          if (profiles.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      LucideIcons.userRoundPlus,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No profiles yet',
-                      style: Theme.of(context).textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Create your first profile to get started.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => _createProfile(isFirstProfile: true),
-                      child: const Text('Create profile'),
-                    ),
-                  ],
-                ),
-              ),
-            ).animate().fadeIn(duration: 300.ms).scale(begin: const Offset(0.95, 0.95));
-          }
-          if (profiles.length == 1 && widget.autoSelectSingle) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _openProfile(profiles.first);
-            });
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            itemCount: profiles.length,
-            itemBuilder: (context, index) {
-              final profile = profiles[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Card(
-                  margin: EdgeInsets.zero,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    leading: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child: Icon(
-                        LucideIcons.user,
-                        color: Theme.of(context).colorScheme.primary,
+      body: MuralBackground.ambient(
+        child: FutureBuilder<List<Profile>>(
+          future: _profilesFuture,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final profiles = snapshot.data!;
+            if (profiles.isEmpty) {
+              return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.userRoundPlus,
+                            size: 48,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No profiles yet',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Create your first profile to get started.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () =>
+                                _createProfile(isFirstProfile: true),
+                            child: const Text('Create profile'),
+                          ),
+                        ],
                       ),
                     ),
-                    title: Text(profile.displayName),
-                    subtitle: Text(profile.currencyCode),
-                    onTap: () => _openProfile(profile),
-                    trailing: PopupMenuButton<String>(
-                      icon: const Icon(LucideIcons.moreVertical),
-                      onSelected: (value) {
-                        if (value == 'rename') _renameProfile(profile);
-                        if (value == 'delete') _deleteProfile(profile);
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(value: 'rename', child: Text('Rename')),
-                        PopupMenuItem(value: 'delete', child: Text('Delete')),
-                      ],
-                    ),
-                  ),
-                ),
-              ).animate().fadeIn(delay: (index * 40).ms, duration: 200.ms).slideX(begin: 0.03, end: 0);
-            },
-          );
-        },
+                  )
+                  .animate()
+                  .fadeIn(duration: 300.ms)
+                  .scale(begin: const Offset(0.95, 0.95));
+            }
+            if (profiles.length == 1 && widget.autoSelectSingle) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openProfile(profiles.first);
+              });
+              return const Center(child: CircularProgressIndicator());
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              itemCount: profiles.length,
+              itemBuilder: (context, index) {
+                final profile = profiles[index];
+                return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          leading: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary
+                                  .withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                            child: Icon(
+                              LucideIcons.user,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          title: Text(profile.displayName),
+                          subtitle: Text(profile.currencyCode),
+                          onTap: () => _openProfile(profile),
+                          trailing: PopupMenuButton<String>(
+                            icon: const Icon(LucideIcons.moreVertical),
+                            onSelected: (value) {
+                              if (value == 'rename') _renameProfile(profile);
+                              if (value == 'delete') _deleteProfile(profile);
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(
+                                value: 'rename',
+                                child: Text('Rename'),
+                              ),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(delay: (index * 40).ms, duration: 200.ms)
+                    .slideX(begin: 0.03, end: 0);
+              },
+            );
+          },
+        ),
       ),
     );
   }

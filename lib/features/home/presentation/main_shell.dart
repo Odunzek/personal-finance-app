@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/widgets/mural_background.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../budgets/presentation/budgets_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -44,10 +45,7 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final tabs = [
-      HomeScreen(
-        key: ValueKey('home-$_refreshTick'),
-        profile: widget.profile,
-      ),
+      HomeScreen(key: ValueKey('home-$_refreshTick'), profile: widget.profile),
       ActivityScreen(
         key: ValueKey('activity-$_refreshTick'),
         profile: widget.profile,
@@ -69,17 +67,41 @@ class _MainShellState extends State<MainShell> {
 
     final destinations = const [
       NavigationDestination(icon: Icon(LucideIcons.house), label: 'Home'),
-      NavigationDestination(icon: Icon(LucideIcons.receiptText), label: 'Activity'),
+      NavigationDestination(
+        icon: Icon(LucideIcons.receiptText),
+        label: 'Activity',
+      ),
       NavigationDestination(icon: Icon(LucideIcons.chartPie), label: 'Budgets'),
-      NavigationDestination(icon: Icon(LucideIcons.trendingUp), label: 'Trends'),
-      NavigationDestination(icon: Icon(LucideIcons.settings), label: 'Settings'),
+      NavigationDestination(
+        icon: Icon(LucideIcons.trendingUp),
+        label: 'Trends',
+      ),
+      NavigationDestination(
+        icon: Icon(LucideIcons.settings),
+        label: 'Settings',
+      ),
     ];
     final railDestinations = const [
-      NavigationRailDestination(icon: Icon(LucideIcons.house), label: Text('Home')),
-      NavigationRailDestination(icon: Icon(LucideIcons.receiptText), label: Text('Activity')),
-      NavigationRailDestination(icon: Icon(LucideIcons.chartPie), label: Text('Budgets')),
-      NavigationRailDestination(icon: Icon(LucideIcons.trendingUp), label: Text('Trends')),
-      NavigationRailDestination(icon: Icon(LucideIcons.settings), label: Text('Settings')),
+      NavigationRailDestination(
+        icon: Icon(LucideIcons.house),
+        label: Text('Home'),
+      ),
+      NavigationRailDestination(
+        icon: Icon(LucideIcons.receiptText),
+        label: Text('Activity'),
+      ),
+      NavigationRailDestination(
+        icon: Icon(LucideIcons.chartPie),
+        label: Text('Budgets'),
+      ),
+      NavigationRailDestination(
+        icon: Icon(LucideIcons.trendingUp),
+        label: Text('Trends'),
+      ),
+      NavigationRailDestination(
+        icon: Icon(LucideIcons.settings),
+        label: Text('Settings'),
+      ),
     ];
     final isTablet = MediaQuery.sizeOf(context).width >= kTabletBreakpoint;
     final fab = _index == 4
@@ -102,7 +124,11 @@ class _MainShellState extends State<MainShell> {
                 destinations: railDestinations,
               ),
               const VerticalDivider(width: 1),
-              Expanded(child: IndexedStack(index: _index, children: tabs)),
+              Expanded(
+                child: MuralBackground.ambient(
+                  child: IndexedStack(index: _index, children: tabs),
+                ),
+              ),
             ],
           ),
         ),
@@ -110,7 +136,11 @@ class _MainShellState extends State<MainShell> {
     }
 
     return Scaffold(
-      body: SafeArea(child: IndexedStack(index: _index, children: tabs)),
+      body: SafeArea(
+        child: MuralBackground.ambient(
+          child: IndexedStack(index: _index, children: tabs),
+        ),
+      ),
       floatingActionButton: fab,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

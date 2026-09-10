@@ -9,6 +9,7 @@ import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' show TransactionKind;
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
+import '../../../core/widgets/mural_background.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
@@ -160,72 +161,78 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
         ],
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final content = _FormContent(
-              amount: _amount,
-              kind: _kind,
-              noteController: _noteController,
-              categoriesFuture: _categoriesFuture,
-              accountsFuture: _accountsFuture,
-              selectedCategory: _selectedCategory,
-              selectedAccount: _selectedAccount,
-              selectedToAccount: _selectedToAccount,
-              onKindChanged: (k) => setState(() {
-                _kind = k;
-                _selectedCategory = null;
-              }),
-              onCategorySelected: (c) => setState(() => _selectedCategory = c),
-              onAccountSelected: (a) => setState(() => _selectedAccount = a),
-              onToAccountSelected: (a) => setState(() => _selectedToAccount = a),
-              amountSize: constraints.maxWidth >= kTabletBreakpoint ? 64 : 44,
-            );
+        child: MuralBackground.ambient(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final content = _FormContent(
+                amount: _amount,
+                kind: _kind,
+                noteController: _noteController,
+                categoriesFuture: _categoriesFuture,
+                accountsFuture: _accountsFuture,
+                selectedCategory: _selectedCategory,
+                selectedAccount: _selectedAccount,
+                selectedToAccount: _selectedToAccount,
+                onKindChanged: (k) => setState(() {
+                  _kind = k;
+                  _selectedCategory = null;
+                }),
+                onCategorySelected: (c) =>
+                    setState(() => _selectedCategory = c),
+                onAccountSelected: (a) => setState(() => _selectedAccount = a),
+                onToAccountSelected: (a) =>
+                    setState(() => _selectedToAccount = a),
+                amountSize: constraints.maxWidth >= kTabletBreakpoint ? 64 : 44,
+              );
 
-            if (constraints.maxWidth >= kTabletBreakpoint) {
-              return Row(
+              if (constraints.maxWidth >= kTabletBreakpoint) {
+                return Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(32),
+                        child: content,
+                      ),
+                    ),
+                    Container(
+                      width: 320,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerLow,
+                        border: Border(
+                          left: BorderSide(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
+                        ),
+                      ),
+                      child: Center(child: _Keypad(onPressed: _pressKey)),
+                    ),
+                  ],
+                );
+              }
+
+              return Column(
                 children: [
                   Expanded(
-                    flex: 3,
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: content,
                     ),
                   ),
-                  Container(
-                    width: 320,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerLow,
-                      border: Border(
-                        left: BorderSide(
-                          color: Theme.of(context).colorScheme.outlineVariant,
-                        ),
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 380),
+                      child: _Keypad(onPressed: _pressKey),
                     ),
-                    child: Center(child: _Keypad(onPressed: _pressKey)),
                   ),
                 ],
               );
-            }
-
-            return Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: content,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 380),
-                    child: _Keypad(onPressed: _pressKey),
-                  ),
-                ),
-              ],
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -281,9 +288,15 @@ class _FormContent extends StatelessWidget {
         const SizedBox(height: 16),
         SegmentedButton<TransactionKind>(
           segments: const [
-            ButtonSegment(value: TransactionKind.expense, label: Text('Expense')),
+            ButtonSegment(
+              value: TransactionKind.expense,
+              label: Text('Expense'),
+            ),
             ButtonSegment(value: TransactionKind.income, label: Text('Income')),
-            ButtonSegment(value: TransactionKind.transfer, label: Text('Transfer')),
+            ButtonSegment(
+              value: TransactionKind.transfer,
+              label: Text('Transfer'),
+            ),
           ],
           selected: {kind},
           onSelectionChanged: (s) => onKindChanged(s.first),
@@ -315,7 +328,9 @@ class _FormContent extends StatelessWidget {
                   const SizedBox(height: 12),
                   _AccountPicker(
                     label: 'To',
-                    accounts: accounts.where((a) => a.id != selectedAccount?.id).toList(),
+                    accounts: accounts
+                        .where((a) => a.id != selectedAccount?.id)
+                        .toList(),
                     selected: selectedToAccount,
                     onSelected: onToAccountSelected,
                   ),
@@ -362,50 +377,55 @@ class _FormContent extends StatelessWidget {
                   final c = categories[index];
                   final selected = c.id == selectedCategory?.id;
                   return GestureDetector(
-                    onTap: () => onCategorySelected(c),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedScale(
-                          scale: selected ? 1.08 : 1.0,
-                          duration: 180.ms,
-                          curve: Curves.easeOut,
-                          child: AnimatedContainer(
-                            duration: 180.ms,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: selected
-                                  ? Border.all(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                      width: 3,
-                                    )
-                                  : null,
+                        onTap: () => onCategorySelected(c),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedScale(
+                              scale: selected ? 1.08 : 1.0,
+                              duration: 180.ms,
+                              curve: Curves.easeOut,
+                              child: AnimatedContainer(
+                                duration: 180.ms,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: selected
+                                      ? Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                          width: 3,
+                                        )
+                                      : null,
+                                ),
+                                padding: EdgeInsets.all(selected ? 3 : 0),
+                                child: CategoryBadge(
+                                  icon: iconForKey(c.iconKey),
+                                  color: Color(c.colorArgb),
+                                  size: 56,
+                                  iconSize: 24,
+                                ),
+                              ),
                             ),
-                            padding: EdgeInsets.all(selected ? 3 : 0),
-                            child: CategoryBadge(
-                              icon: iconForKey(c.iconKey),
-                              color: Color(c.colorArgb),
-                              size: 56,
-                              iconSize: 24,
+                            const SizedBox(height: 6),
+                            Text(
+                              c.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : null,
+                                  ),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          c.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: selected ? FontWeight.w600 : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ).animate().fadeIn(
-                    delay: (index * 30).ms,
-                    duration: 200.ms,
-                  ).scale(begin: const Offset(0.9, 0.9));
+                      )
+                      .animate()
+                      .fadeIn(delay: (index * 30).ms, duration: 200.ms)
+                      .scale(begin: const Offset(0.9, 0.9));
                 },
               );
             },
@@ -465,7 +485,20 @@ class _Keypad extends StatelessWidget {
       crossAxisSpacing: 10,
       childAspectRatio: 1.5,
       children: [
-        for (final k in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'])
+        for (final k in [
+          '1',
+          '2',
+          '3',
+          '4',
+          '5',
+          '6',
+          '7',
+          '8',
+          '9',
+          '.',
+          '0',
+          '⌫',
+        ])
           _KeypadButton(label: k, onTap: () => onPressed(k)),
       ],
     );

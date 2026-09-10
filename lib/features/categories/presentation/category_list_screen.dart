@@ -6,6 +6,7 @@ import '../../../core/models/category.dart';
 import '../../../core/models/default_categories.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/widgets/category_badge.dart';
+import '../../../core/widgets/mural_background.dart';
 import '../data/category_repository.dart';
 import 'category_form_sheet.dart';
 import 'category_style_options.dart';
@@ -132,60 +133,69 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
         onPressed: _addCategory,
         child: const Icon(LucideIcons.plus),
       ),
-      body: FutureBuilder<List<Category>>(
-        future: _categoriesFuture,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final categories = snapshot.data!;
-          if (categories.isEmpty) {
-            return _EmptyState(onAdd: _addCategory);
-          }
-          return GridView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 420,
-              mainAxisExtent: 76,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-            ),
-            itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              return Card(
-                margin: EdgeInsets.zero,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  leading: CategoryBadge(
-                    icon: iconForKey(category.iconKey),
-                    color: Color(category.colorArgb),
-                  ),
-                  title: Text(category.name),
-                  subtitle: Text(
-                    category.type == CategoryType.income
-                        ? 'Income'
-                        : 'Expense',
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    icon: const Icon(LucideIcons.moreVertical),
-                    onSelected: (value) {
-                      if (value == 'edit') _editCategory(category);
-                      if (value == 'remove') _deactivateCategory(category);
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'remove', child: Text('Remove')),
-                    ],
-                  ),
-                ),
-              ).animate().fadeIn(delay: (index * 40).ms, duration: 200.ms).scale(begin: const Offset(0.97, 0.97));
-            },
-          );
-        },
+      body: MuralBackground.ambient(
+        child: FutureBuilder<List<Category>>(
+          future: _categoriesFuture,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final categories = snapshot.data!;
+            if (categories.isEmpty) {
+              return _EmptyState(onAdd: _addCategory);
+            }
+            return GridView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 420,
+                mainAxisExtent: 76,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                return Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
+                        leading: CategoryBadge(
+                          icon: iconForKey(category.iconKey),
+                          color: Color(category.colorArgb),
+                        ),
+                        title: Text(category.name),
+                        subtitle: Text(
+                          category.type == CategoryType.income
+                              ? 'Income'
+                              : 'Expense',
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          icon: const Icon(LucideIcons.moreVertical),
+                          onSelected: (value) {
+                            if (value == 'edit') _editCategory(category);
+                            if (value == 'remove')
+                              _deactivateCategory(category);
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(
+                              value: 'remove',
+                              child: Text('Remove'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(delay: (index * 40).ms, duration: 200.ms)
+                    .scale(begin: const Offset(0.97, 0.97));
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -212,9 +222,8 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'No categories yet',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(

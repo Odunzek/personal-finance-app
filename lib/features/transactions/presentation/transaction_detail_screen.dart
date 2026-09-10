@@ -7,6 +7,7 @@ import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
+import '../../../core/widgets/mural_background.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
@@ -194,29 +195,37 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             IconButton(onPressed: _edit, icon: const Icon(LucideIcons.pencil)),
-            IconButton(onPressed: _confirmDelete, icon: const Icon(LucideIcons.trash2)),
+            IconButton(
+              onPressed: _confirmDelete,
+              icon: const Icon(LucideIcons.trash2),
+            ),
           ],
         ),
         Center(
-          child: CategoryBadge(
-            icon: isTransfer ? LucideIcons.arrowRightLeft : iconForKey(_category?.iconKey ?? 'other'),
-            color: isTransfer
-                ? Theme.of(context).colorScheme.onSurfaceVariant
-                : (_category != null ? Color(_category!.colorArgb) : null),
-            size: 56,
-            iconSize: 26,
-          ).animate().scale(
-            begin: const Offset(0.7, 0.7),
-            duration: 350.ms,
-            curve: Curves.easeOutBack,
-          ),
+          child:
+              CategoryBadge(
+                icon: isTransfer
+                    ? LucideIcons.arrowRightLeft
+                    : iconForKey(_category?.iconKey ?? 'other'),
+                color: isTransfer
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : (_category != null ? Color(_category!.colorArgb) : null),
+                size: 56,
+                iconSize: 26,
+              ).animate().scale(
+                begin: const Offset(0.7, 0.7),
+                duration: 350.ms,
+                curve: Curves.easeOutBack,
+              ),
         ),
         const SizedBox(height: 12),
         Center(
           child: Text(
             _note?.isNotEmpty == true
                 ? _note!
-                : (isTransfer ? 'Transfer' : (_category?.name ?? 'Uncategorized')),
+                : (isTransfer
+                      ? 'Transfer'
+                      : (_category?.name ?? 'Uncategorized')),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
@@ -226,7 +235,9 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
                 ? _amountMinorUnits
                 : (isIncome ? _amountMinorUnits : -_amountMinorUnits),
             fontSize: 34,
-            color: !isTransfer && isIncome ? Theme.of(context).colorScheme.primary : null,
+            color: !isTransfer && isIncome
+                ? Theme.of(context).colorScheme.primary
+                : null,
           ),
         ),
         const SizedBox(height: 24),
@@ -236,13 +247,19 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
             children: [
               if (!isTransfer)
                 _DetailRow('Category', _category?.name ?? 'Uncategorized'),
-              _DetailRow('Date', DateFormat.yMMMd().add_jm().format(_occurredAt)),
+              _DetailRow(
+                'Date',
+                DateFormat.yMMMd().add_jm().format(_occurredAt),
+              ),
             ],
           ),
         ),
         if (!isTransfer) ...[
           const SizedBox(height: 16),
-          OutlinedButton(onPressed: _recategorize, child: const Text('Recategorize')),
+          OutlinedButton(
+            onPressed: _recategorize,
+            child: const Text('Recategorize'),
+          ),
         ],
       ],
     );
@@ -282,15 +299,19 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop(_changed)),
+          leading: BackButton(
+            onPressed: () => Navigator.of(context).pop(_changed),
+          ),
         ),
-        body: TransactionDetailPane(
-          transaction: widget.transaction,
-          category: widget.category,
-          transactionRepository: widget.transactionRepository,
-          categoryRepository: widget.categoryRepository,
-          onChanged: () => setState(() => _changed = true),
-          onDelete: () => Navigator.of(context).pop(true),
+        body: MuralBackground.ambient(
+          child: TransactionDetailPane(
+            transaction: widget.transaction,
+            category: widget.category,
+            transactionRepository: widget.transactionRepository,
+            categoryRepository: widget.categoryRepository,
+            onChanged: () => setState(() => _changed = true),
+            onDelete: () => Navigator.of(context).pop(true),
+          ),
         ),
       ),
     );

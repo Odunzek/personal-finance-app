@@ -7,6 +7,7 @@ import '../../../core/models/account_balance.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart';
 import '../../../core/widgets/money_text.dart';
+import '../../../core/widgets/mural_background.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../data/account_repository.dart';
 import 'account_form_sheet.dart';
@@ -108,54 +109,73 @@ class _AccountListScreenState extends State<AccountListScreen> {
         onPressed: _addAccount,
         child: const Icon(LucideIcons.plus),
       ),
-      body: FutureBuilder<_AccountsData>(
-        future: _dataFuture,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final data = snapshot.data!;
-          if (data.accounts.isEmpty) {
-            return _EmptyState(onAdd: _addAccount);
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            itemCount: data.accounts.length,
-            itemBuilder: (context, index) {
-              final account = data.accounts[index];
-              final balance = computeAccountBalance(account, data.transactions);
-              final isLiability = account.type == AccountType.liability;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Card(
-                  margin: EdgeInsets.zero,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    leading: CircleAvatar(
-                      backgroundColor: isLiability
-                          ? Theme.of(context).colorScheme.error.withValues(alpha: 0.15)
-                          : Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                      child: Icon(
-                        isLiability ? LucideIcons.creditCard : LucideIcons.wallet,
-                        color: isLiability
-                            ? Theme.of(context).colorScheme.error
-                            : Theme.of(context).colorScheme.primary,
+      body: MuralBackground.ambient(
+        child: FutureBuilder<_AccountsData>(
+          future: _dataFuture,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final data = snapshot.data!;
+            if (data.accounts.isEmpty) {
+              return _EmptyState(onAdd: _addAccount);
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              itemCount: data.accounts.length,
+              itemBuilder: (context, index) {
+                final account = data.accounts[index];
+                final balance = computeAccountBalance(
+                  account,
+                  data.transactions,
+                );
+                final isLiability = account.type == AccountType.liability;
+                return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: isLiability
+                                ? Theme.of(context).colorScheme.error
+                                      .withValues(alpha: 0.15)
+                                : Theme.of(context).colorScheme.primary
+                                      .withValues(alpha: 0.15),
+                            child: Icon(
+                              isLiability
+                                  ? LucideIcons.creditCard
+                                  : LucideIcons.wallet,
+                              color: isLiability
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          title: Text(account.name),
+                          subtitle: Text(
+                            isLiability ? 'Credit card' : 'Checking / Cash',
+                          ),
+                          trailing: MoneyText(
+                            isLiability ? -balance : balance,
+                            fontSize: 16,
+                            color: isLiability
+                                ? Theme.of(context).colorScheme.error
+                                : null,
+                          ),
+                          onLongPress: () => _deactivateAccount(account),
+                        ),
                       ),
-                    ),
-                    title: Text(account.name),
-                    subtitle: Text(isLiability ? 'Credit card' : 'Checking / Cash'),
-                    trailing: MoneyText(
-                      isLiability ? -balance : balance,
-                      fontSize: 16,
-                      color: isLiability ? Theme.of(context).colorScheme.error : null,
-                    ),
-                    onLongPress: () => _deactivateAccount(account),
-                  ),
-                ),
-              ).animate().fadeIn(delay: (index * 40).ms, duration: 200.ms).slideX(begin: 0.03, end: 0);
-            },
-          );
-        },
+                    )
+                    .animate()
+                    .fadeIn(delay: (index * 40).ms, duration: 200.ms)
+                    .slideX(begin: 0.03, end: 0);
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -182,7 +202,8 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'No accounts yet',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -191,7 +212,10 @@ class _EmptyState extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-            ElevatedButton(onPressed: onAdd, child: const Text('Add an account')),
+            ElevatedButton(
+              onPressed: onAdd,
+              child: const Text('Add an account'),
+            ),
           ],
         ),
       ),
