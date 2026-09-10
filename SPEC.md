@@ -23,6 +23,10 @@ iOS is not needed now but is a future option without a rewrite, since Flutter sh
 - **Profile**: id, ownerUserId, displayName, currencyCode (default CAD), createdAt
 - **Category**: id, profileId, name, type (income/expense), colorArgb, iconKey, isActive (soft-delete — never hard-deleted once referenced), parentCategoryId (nullable, reserved for future subcategories), sortOrder
 - **Transaction**: id, profileId, categoryId, amountMinorUnits (integer cents, never float), type (income/expense, denormalized from category so edits never rewrite history), occurredAt, note, createdAt, updatedAt
+- **Budget**: id, profileId, categoryId, limitMinorUnits, month (which calendar month this limit applies to). Purely computed/informational — a limit compared against the sum of that category's transactions for the month. No enforcement, no connection to any real account.
+- **SavingsTarget**: id, profileId, targetMinorUnits, month. Compared against that month's (income − expenses) to show progress toward a monthly savings goal. Same kind of simple computed comparison as a budget, just inverted (a floor to reach, not a ceiling to stay under).
+
+Both are intentionally lightweight: a number to compare against, and a sum we already have the data to compute from existing transactions. Nothing here touches a real financial account, blocks spending, or requires any external connection — it's a calculator with a UI, not a system integration.
 
 ## v1 Feature checklist
 1. **Auth**: sign up / log in (Supabase Auth), same account usable from phone, tablet, and laptop web
@@ -31,14 +35,19 @@ iOS is not needed now but is a future option without a rewrite, since Flutter sh
 4. **Quick-add transaction**: amount, income/expense, category, date (defaults today), optional note
 5. **Transaction history**: list, filter by date range/category/type, search
 6. **Categories**: user-created/renamed/recolored/deactivated, per profile
-7. **Trends/reports**: monthly summary, category breakdown chart, spending-over-time chart
-8. **Sync**: the same data available and editable from phone, tablet, and laptop web, via Supabase
-9. **Settings**: account management, PIN/biometric management (mobile), theme, about
-10. **App-level PIN/biometric lock** on the mobile apps
-11. **Daily/scheduled reminder notifications** — local, on-device scheduled notifications nudging you to log the day's transactions; no backend involvement, purely a device-level feature
+7. **Budgets**: a monthly spending limit per category, with a progress view against that month's actual spend in that category
+8. **Savings target**: a monthly savings goal, with a progress view against that month's income minus expenses
+9. **Trends/reports**: monthly summary, category breakdown chart, spending-over-time chart
+10. **Sync**: the same data available and editable from phone, tablet, and laptop web, via Supabase
+11. **Settings**: account management, PIN/biometric management (mobile), theme, backup/restore, about
+12. **App-level PIN/biometric lock** on the mobile apps, with its own dedicated lock/unlock screen
+13. **Daily/scheduled reminder notifications** — local, on-device scheduled notifications nudging you to log the day's transactions, with a settings toggle to configure/disable them; no backend involvement, purely a device-level feature
+
+## Navigation (v1)
+Bottom nav, 5 destinations: **Home**, **Activity**, **Budgets** (includes the savings target as a section within it), **Trends**, **Settings**, plus a floating quick-add button reachable from Home/Activity/Budgets/Trends.
 
 ## Explicitly deferred (v2+)
-- **Budgeting** (spending limits, alerts) and **debt tracking/payoff planning** (loan/credit balances, progress) — grouped together as the first post-v1 milestone
+- **Debt tracking/payoff planning** (loan/credit balances, progress)
 - Recurring/scheduled transactions
 - Receipt photo attachments
 - Home-screen quick-add widget
