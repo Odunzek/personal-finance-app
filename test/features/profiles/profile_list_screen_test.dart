@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:finance_app/core/models/category.dart';
 import 'package:finance_app/core/models/profile.dart';
 import 'package:finance_app/features/auth/data/auth_repository.dart';
+import 'package:finance_app/features/categories/data/category_repository.dart';
 import 'package:finance_app/features/profiles/data/profile_repository.dart';
 import 'package:finance_app/features/profiles/presentation/profile_list_screen.dart';
 
@@ -57,6 +59,46 @@ class _FakeProfileRepository implements ProfileRepository {
   }
 }
 
+class _FakeCategoryRepository implements CategoryRepository {
+  final List<Category> created = [];
+  int nextId = 1;
+
+  @override
+  Future<List<Category>> listActiveCategories(int profileId) async =>
+      created.where((c) => c.profileId == profileId).toList();
+
+  @override
+  Future<Category> createCategory({
+    required int profileId,
+    required String name,
+    required CategoryType type,
+    required int colorArgb,
+    required String iconKey,
+  }) async {
+    final category = Category(
+      id: nextId++,
+      profileId: profileId,
+      name: name,
+      type: type,
+      colorArgb: colorArgb,
+      iconKey: iconKey,
+      isActive: true,
+      sortOrder: 0,
+    );
+    created.add(category);
+    return category;
+  }
+
+  @override
+  Future<void> renameCategory(int id, String name) async {}
+
+  @override
+  Future<void> recolorCategory(int id, int colorArgb) async {}
+
+  @override
+  Future<void> deactivateCategory(int id) async {}
+}
+
 void main() {
   testWidgets('shows empty state with no profiles', (tester) async {
     final repo = _FakeProfileRepository();
@@ -65,6 +107,7 @@ void main() {
         home: ProfileListScreen(
           authRepository: _FakeAuthRepository(),
           profileRepository: repo,
+          categoryRepository: _FakeCategoryRepository(),
         ),
       ),
     );
@@ -87,6 +130,7 @@ void main() {
         home: ProfileListScreen(
           authRepository: _FakeAuthRepository(),
           profileRepository: repo,
+          categoryRepository: _FakeCategoryRepository(),
         ),
       ),
     );

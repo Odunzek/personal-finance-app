@@ -56,14 +56,21 @@ class SettingsScreen extends StatelessWidget {
                 title: const Text('Appearance'),
                 trailing: ValueListenableBuilder<ThemeMode>(
                   valueListenable: themeModeNotifier,
-                  builder: (context, mode, _) => SegmentedButton<ThemeMode>(
-                    segments: const [
-                      ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                      ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-                    ],
-                    selected: {mode == ThemeMode.dark ? ThemeMode.dark : ThemeMode.light},
-                    onSelectionChanged: (s) => themeModeNotifier.value = s.first,
-                  ),
+                  builder: (context, mode, _) {
+                    final effectiveIsDark =
+                        mode == ThemeMode.dark ||
+                        (mode == ThemeMode.system &&
+                            MediaQuery.platformBrightnessOf(context) ==
+                                Brightness.dark);
+                    return SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+                        ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                      ],
+                      selected: {effectiveIsDark ? ThemeMode.dark : ThemeMode.light},
+                      onSelectionChanged: (s) => themeModeNotifier.value = s.first,
+                    );
+                  },
                 ),
               ),
               const Divider(height: 1),

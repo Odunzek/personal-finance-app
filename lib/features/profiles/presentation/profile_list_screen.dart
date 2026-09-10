@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/models/default_categories.dart';
 import '../../../core/models/profile.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../categories/data/category_repository.dart';
 import '../../home/presentation/main_shell.dart';
 import '../data/profile_repository.dart';
 import 'profile_form_sheet.dart';
@@ -11,6 +13,7 @@ import 'profile_form_sheet.dart';
 class ProfileListScreen extends StatefulWidget {
   final AuthRepository authRepository;
   final ProfileRepository profileRepository;
+  final CategoryRepository categoryRepository;
 
   /// Auto-enter the profile without showing the list when there's exactly
   /// one. Only appropriate for the initial post-sign-in gate — when this
@@ -23,7 +26,9 @@ class ProfileListScreen extends StatefulWidget {
     required this.authRepository,
     this.autoSelectSingle = false,
     ProfileRepository? profileRepository,
-  }) : profileRepository = profileRepository ?? SupabaseProfileRepository();
+    CategoryRepository? categoryRepository,
+  }) : profileRepository = profileRepository ?? SupabaseProfileRepository(),
+       categoryRepository = categoryRepository ?? SupabaseCategoryRepository();
 
   @override
   State<ProfileListScreen> createState() => _ProfileListScreenState();
@@ -51,6 +56,15 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
       displayName: result.displayName,
       currencyCode: result.currencyCode,
     );
+    for (final seed in kDefaultCategorySeeds) {
+      await widget.categoryRepository.createCategory(
+        profileId: created.id,
+        name: seed.name,
+        type: seed.type,
+        colorArgb: seed.colorArgb,
+        iconKey: seed.iconKey,
+      );
+    }
     if (isFirstProfile) {
       _openProfile(created);
       return;

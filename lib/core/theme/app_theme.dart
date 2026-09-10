@@ -10,18 +10,28 @@ class AppTheme {
   static ThemeData get dark => _build(Brightness.dark, AppColors.dark);
 
   static ThemeData _build(Brightness brightness, AppPalette p) {
-    final base = ThemeData(brightness: brightness, useMaterial3: true);
+    // Seed the whole Material 3 color scheme from our brand teal so derived
+    // roles (primaryContainer, secondaryContainer, etc. - used by FAB, chips,
+    // SegmentedButton) land in the teal family instead of Flutter's generic
+    // default purple, then pin the specific roles we have exact brand values
+    // for on top.
+    final seededScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.accent,
+      brightness: brightness,
+    );
+    final base = ThemeData(colorScheme: seededScheme, useMaterial3: true);
     final bodyFont = GoogleFonts.ibmPlexSansTextTheme(base.textTheme);
 
     return base.copyWith(
       scaffoldBackgroundColor: p.background,
       textTheme: bodyFont.apply(bodyColor: p.ink, displayColor: p.ink),
-      colorScheme: base.colorScheme.copyWith(
+      colorScheme: seededScheme.copyWith(
         brightness: brightness,
         primary: AppColors.accent,
         onPrimary: AppColors.onAccent,
         surface: p.card,
         onSurface: p.ink,
+        error: p.over,
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: p.bar,
@@ -47,6 +57,21 @@ class AppTheme {
           ),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.onAccent,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: SegmentedButton.styleFrom(
+          selectedBackgroundColor: AppColors.accent,
+          selectedForegroundColor: AppColors.onAccent,
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        selectedColor: AppColors.accent,
+        labelStyle: TextStyle(color: p.ink),
+        secondarySelectedColor: AppColors.accent,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.accent,

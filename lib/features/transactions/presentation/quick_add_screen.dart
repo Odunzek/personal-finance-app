@@ -95,9 +95,12 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+        leadingWidth: 88,
+        leading: Center(
+          child: TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', softWrap: false),
+          ),
         ),
         title: const Text('New transaction'),
         centerTitle: true,
