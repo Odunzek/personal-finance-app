@@ -3,6 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/profile.dart';
+import '../../../core/notifications/reminder_service.dart';
+import '../../../core/security/pin_setup_screen.dart';
+import '../../../core/security/pin_vault.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../budgets/data/budget_repository.dart';
@@ -32,6 +35,59 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _resetting = false;
+  bool _hasPin = false;
+  bool _reminderEnabled = false;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
+  bool _loadedSecurityState = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSecurityState();
+  }
+
+  Future<void> _loadSecurityState() async {
+    final hasPin = await PinVault.hasPin();
+    final reminderEnabled = await ReminderService.instance.isEnabled();
+    final reminderTime = await ReminderService.instance.getTime();
+    if (!mounted) return;
+    setState(() {
+      _hasPin = hasPin;
+      _reminderEnabled = reminderEnabled;
+      _reminderTime = reminderTime;
+      _loadedSecurityState = true;
+    });
+  }
+
+  Future<void> _openAppLock() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => PinSetupScreen(hasPin: _hasPin)),
+    );
+    if (changed == true) _loadSecurityState();
+  }
+
+  Future<void> _toggleReminder(bool enabled) async {
+    if (enabled) {
+      final picked = await showTimePicker(context: context, initialTime: _reminderTime);
+      if (picked == null) return;
+      await ReminderService.instance.setReminder(picked);
+      setState(() {
+        _reminderEnabled = true;
+        _reminderTime = picked;
+      });
+    } else {
+      await ReminderService.instance.cancel();
+      setState(() => _reminderEnabled = false);
+    }
+  }
+
+  Future<void> _changeReminderTime() async {
+    if (!_reminderEnabled) return;
+    final picked = await showTimePicker(context: context, initialTime: _reminderTime);
+    if (picked == null) return;
+    await ReminderService.instance.setReminder(picked);
+    setState(() => _reminderTime = picked);
+  }
 
   Future<void> _confirmResetData() async {
     final confirmed = await showDialog<bool>(
@@ -76,8 +132,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 16),
@@ -144,6 +200,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
         const SizedBox(height: 16),
+        if (_loadedSecurityState)
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(LucideIcons.lock),
+                  title: const Text('App lock'),
+                  subtitle: Text(_hasPin ? 'On · PIN required to open the app' : 'Off'),
+                  onTap: _openAppLock,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(LucideIcons.bellRing),
+                  title: const Text('Daily reminder'),
+                  subtitle: Text(
+                    _reminderEnabled
+                        ? 'On · ${_reminderTime.format(context)} · tap to change'
+                        : 'Off · nudges you to log today\'s spending',
+                  ),
+                  onTap: _reminderEnabled ? _changeReminderTime : null,
+                  trailing: Switch(
+                    value: _reminderEnabled,
+                    onChanged: _toggleReminder,
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(delay: 40.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
+        const SizedBox(height: 16),
         Card(
           margin: EdgeInsets.zero,
           child: ListTile(
@@ -173,6 +259,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: widget.authRepository.signOut,
           ),
         ).animate().fadeIn(delay: 120.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
+      ],
+    );
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: content,
+          ),
+        ),
       ],
     );
   }
