@@ -46,3 +46,29 @@ class SavingsTarget {
     );
   }
 }
+
+/// A savings goal for a whole calendar year — set and viewed independently
+/// per year, unrelated to any other year's goal or to the monthly
+/// [SavingsTarget].
+class SavingsGoal {
+  final int id;
+  final int profileId;
+  final int year;
+  final int targetMinorUnits;
+
+  const SavingsGoal({
+    required this.id,
+    required this.profileId,
+    required this.year,
+    required this.targetMinorUnits,
+  });
+
+  factory SavingsGoal.fromRow(Map<String, dynamic> row) {
+    return SavingsGoal(
+      id: row['id'] as int,
+      profileId: row['profile_id'] as int,
+      year: row['year'] as int,
+      targetMinorUnits: row['target_minor_units'] as int,
+    );
+  }
+}

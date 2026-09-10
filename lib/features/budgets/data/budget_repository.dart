@@ -21,8 +21,15 @@ abstract class BudgetRepository {
     required int targetMinorUnits,
   });
 
-  /// Permanently deletes every budget and savings target for a profile —
-  /// used by the Settings "Reset data" action.
+  Future<SavingsGoal?> getSavingsGoal(int profileId, int year);
+  Future<SavingsGoal> upsertSavingsGoal({
+    required int profileId,
+    required int year,
+    required int targetMinorUnits,
+  });
+
+  /// Permanently deletes every budget, savings target, and yearly savings
+  /// goal for a profile — used by the Settings "Reset data" action.
   Future<void> deleteAllForProfile(int profileId);
 }
 
@@ -98,8 +105,39 @@ class SupabaseBudgetRepository implements BudgetRepository {
   }
 
   @override
+  Future<SavingsGoal?> getSavingsGoal(int profileId, int year) async {
+    final row = await supabase
+        .from('savings_goals')
+        .select()
+        .eq('profile_id', profileId)
+        .eq('year', year)
+        .maybeSingle();
+    if (row == null) return null;
+    return SavingsGoal.fromRow(row);
+  }
+
+  @override
+  Future<SavingsGoal> upsertSavingsGoal({
+    required int profileId,
+    required int year,
+    required int targetMinorUnits,
+  }) async {
+    final row = await supabase
+        .from('savings_goals')
+        .upsert({
+          'profile_id': profileId,
+          'year': year,
+          'target_minor_units': targetMinorUnits,
+        }, onConflict: 'profile_id,year')
+        .select()
+        .single();
+    return SavingsGoal.fromRow(row);
+  }
+
+  @override
   Future<void> deleteAllForProfile(int profileId) async {
     await supabase.from('budgets').delete().eq('profile_id', profileId);
     await supabase.from('savings_targets').delete().eq('profile_id', profileId);
+    await supabase.from('savings_goals').delete().eq('profile_id', profileId);
   }
 }

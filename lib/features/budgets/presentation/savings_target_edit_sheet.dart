@@ -4,12 +4,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/widgets/animated_progress_bar.dart';
 import '../../../core/widgets/money_text.dart';
 
-const _stepMinorUnits = 2500;
-
 Future<int?> showSavingsTargetEditSheet(
   BuildContext context, {
   required int initialTargetMinorUnits,
   required int savedSoFarMinorUnits,
+  String sheetTitle = 'Savings target',
+  String goalLabel = 'Monthly goal',
+  String progressSuffix = ' of your goal so far this month',
+  int stepMinorUnits = 2500,
 }) {
   return showModalBottomSheet<int>(
     context: context,
@@ -17,6 +19,10 @@ Future<int?> showSavingsTargetEditSheet(
     builder: (context) => _SavingsTargetEditSheet(
       initialTargetMinorUnits: initialTargetMinorUnits,
       savedSoFarMinorUnits: savedSoFarMinorUnits,
+      sheetTitle: sheetTitle,
+      goalLabel: goalLabel,
+      progressSuffix: progressSuffix,
+      stepMinorUnits: stepMinorUnits,
     ),
   );
 }
@@ -24,10 +30,18 @@ Future<int?> showSavingsTargetEditSheet(
 class _SavingsTargetEditSheet extends StatefulWidget {
   final int initialTargetMinorUnits;
   final int savedSoFarMinorUnits;
+  final String sheetTitle;
+  final String goalLabel;
+  final String progressSuffix;
+  final int stepMinorUnits;
 
   const _SavingsTargetEditSheet({
     required this.initialTargetMinorUnits,
     required this.savedSoFarMinorUnits,
+    required this.sheetTitle,
+    required this.goalLabel,
+    required this.progressSuffix,
+    required this.stepMinorUnits,
   });
 
   @override
@@ -68,9 +82,9 @@ class _SavingsTargetEditSheetState extends State<_SavingsTargetEditSheet> {
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Cancel'),
               ),
-              const Text(
-                'Savings target',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              Text(
+                widget.sheetTitle,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(_target),
@@ -83,7 +97,7 @@ class _SavingsTargetEditSheetState extends State<_SavingsTargetEditSheet> {
             child: Column(
               children: [
                 Text(
-                  'Monthly goal',
+                  widget.goalLabel,
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 8),
@@ -93,7 +107,7 @@ class _SavingsTargetEditSheetState extends State<_SavingsTargetEditSheet> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     MoneyText(widget.savedSoFarMinorUnits, fontSize: 14),
-                    const Text(' of your goal so far this month'),
+                    Text(widget.progressSuffix),
                   ],
                 ),
               ],
@@ -105,13 +119,17 @@ class _SavingsTargetEditSheetState extends State<_SavingsTargetEditSheet> {
             children: [
               IconButton.filledTonal(
                 onPressed: () => setState(
-                  () => _target = (_target - _stepMinorUnits).clamp(0, 1 << 62),
+                  () => _target = (_target - widget.stepMinorUnits).clamp(
+                    0,
+                    1 << 62,
+                  ),
                 ),
                 icon: const Icon(LucideIcons.minus),
               ),
               const SizedBox(width: 16),
               IconButton.filledTonal(
-                onPressed: () => setState(() => _target += _stepMinorUnits),
+                onPressed: () =>
+                    setState(() => _target += widget.stepMinorUnits),
                 icon: const Icon(LucideIcons.plus),
               ),
             ],

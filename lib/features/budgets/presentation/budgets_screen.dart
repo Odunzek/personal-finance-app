@@ -15,6 +15,7 @@ import '../../transactions/data/transaction_repository.dart';
 import '../data/budget_repository.dart';
 import 'budget_edit_sheet.dart';
 import 'savings_target_edit_sheet.dart';
+import 'yearly_savings_goal_card.dart';
 
 class BudgetsScreen extends StatefulWidget {
   final Profile profile;
@@ -77,7 +78,10 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     final month = MonthRange.current();
     final results = await Future.wait([
       widget.categoryRepository.listActiveCategories(widget.profile.id),
-      widget.budgetRepository.listBudgetsForMonth(widget.profile.id, month.start),
+      widget.budgetRepository.listBudgetsForMonth(
+        widget.profile.id,
+        month.start,
+      ),
       widget.budgetRepository.getSavingsTarget(widget.profile.id, month.start),
       widget.transactionRepository.listTransactions(
         widget.profile.id,
@@ -129,7 +133,11 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     _reload();
   }
 
-  Future<void> _editBudget(_BudgetsData data, Category category, Budget? existing) async {
+  Future<void> _editBudget(
+    _BudgetsData data,
+    Category category,
+    Budget? existing,
+  ) async {
     final result = await showBudgetEditSheet(
       context,
       category: category,
@@ -154,7 +162,9 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
   Future<void> _pickCategoryToBudget(_BudgetsData data) async {
     final budgetedIds = data.budgets.map((b) => b.categoryId).toSet();
     final candidates = data.categories
-        .where((c) => c.type == CategoryType.expense && !budgetedIds.contains(c.id))
+        .where(
+          (c) => c.type == CategoryType.expense && !budgetedIds.contains(c.id),
+        )
         .toList();
     if (candidates.isEmpty) return;
     final picked = await showModalBottomSheet<Category>(
@@ -163,7 +173,12 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
         child: ListView(
           shrinkWrap: true,
           children: candidates
-              .map((c) => ListTile(title: Text(c.name), onTap: () => Navigator.of(context).pop(c)))
+              .map(
+                (c) => ListTile(
+                  title: Text(c.name),
+                  onTap: () => Navigator.of(context).pop(c),
+                ),
+              )
               .toList(),
         ),
       ),
@@ -194,9 +209,13 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
             (sum, b) => sum + (data.spentByCategoryId[b.categoryId] ?? 0),
           );
           final savedSoFar = data.monthIncome - data.monthExpense;
-          final savingsRatio = data.savingsTarget == null || data.savingsTarget!.targetMinorUnits == 0
+          final savingsRatio =
+              data.savingsTarget == null ||
+                  data.savingsTarget!.targetMinorUnits == 0
               ? 0.0
-              : (savedSoFar / data.savingsTarget!.targetMinorUnits).clamp(0, 1).toDouble();
+              : (savedSoFar / data.savingsTarget!.targetMinorUnits)
+                    .clamp(0, 1)
+                    .toDouble();
 
           final savingsCard = Card(
             margin: EdgeInsets.zero,
@@ -214,9 +233,8 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                       strokeWidth: 7,
                       center: Text(
                         '${(savingsRatio * 100).round()}%',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -234,9 +252,8 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 'Savings target',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -244,11 +261,15 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                           if (data.savingsTarget == null)
                             const Text('Tap to set a monthly savings goal')
                           else
-                            Row(
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 MoneyText(savedSoFar, fontSize: 15),
                                 const Text(' of your '),
-                                MoneyText(data.savingsTarget!.targetMinorUnits, fontSize: 15),
+                                MoneyText(
+                                  data.savingsTarget!.targetMinorUnits,
+                                  fontSize: 15,
+                                ),
                                 const Text(' goal'),
                               ],
                             ),
@@ -261,86 +282,109 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
             ),
           ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0);
 
-          final leftToSpendCard = Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        LucideIcons.wallet,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+          final leftToSpendCard =
+              Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                LucideIcons.wallet,
+                                size: 18,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Left to spend',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                          MoneyText(
+                            (totalLimit - totalSpent).clamp(0, 1 << 62),
+                            fontSize: 20,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text('Left to spend', style: Theme.of(context).textTheme.bodyMedium),
-                    ],
-                  ),
-                  MoneyText((totalLimit - totalSpent).clamp(0, 1 << 62), fontSize: 20),
-                ],
-              ),
-            ),
-          ).animate().fadeIn(delay: 60.ms, duration: 300.ms).slideY(begin: 0.05, end: 0);
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(delay: 60.ms, duration: 300.ms)
+                  .slideY(begin: 0.05, end: 0);
 
           Widget budgetCard(int budgetIndex, Budget b) {
             final category = categoriesById[b.categoryId];
             if (category == null) return const SizedBox.shrink();
             final spent = data.spentByCategoryId[b.categoryId] ?? 0;
-            final ratio = b.limitMinorUnits == 0 ? 0.0 : (spent / b.limitMinorUnits).clamp(0, 1.5);
+            final ratio = b.limitMinorUnits == 0
+                ? 0.0
+                : (spent / b.limitMinorUnits).clamp(0, 1.5);
             final color = ratio >= 1
                 ? Theme.of(context).colorScheme.error
                 : ratio >= 0.7
                 ? const Color(0xFFC98A16)
                 : Theme.of(context).colorScheme.primary;
             return Card(
-              margin: EdgeInsets.zero,
-              child: InkWell(
-                onTap: () => _editBudget(data, category, b),
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      BudgetRing(
-                        ratio: ratio.toDouble(),
-                        color: color,
-                        size: 44,
-                        strokeWidth: 5,
-                        center: Text(
-                          '${(ratio * 100).round()}%',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              category.name,
-                              style: const TextStyle(fontWeight: FontWeight.w500),
+                  margin: EdgeInsets.zero,
+                  child: InkWell(
+                    onTap: () => _editBudget(data, category, b),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          BudgetRing(
+                            ratio: ratio.toDouble(),
+                            color: color,
+                            size: 44,
+                            strokeWidth: 5,
+                            center: Text(
+                              '${(ratio * 100).round()}%',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
                             ),
-                            const SizedBox(height: 2),
-                            Row(
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                MoneyText(spent, fontSize: 13),
-                                Text(' of ', style: Theme.of(context).textTheme.bodySmall),
-                                MoneyText(b.limitMinorUnits, fontSize: 13),
+                                Text(
+                                  category.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    MoneyText(spent, fontSize: 13),
+                                    Text(
+                                      ' of ',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
+                                    MoneyText(b.limitMinorUnits, fontSize: 13),
+                                  ],
+                                ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ).animate().fadeIn(delay: (budgetIndex * 60).ms, duration: 250.ms).slideY(begin: 0.05, end: 0);
+                )
+                .animate()
+                .fadeIn(delay: (budgetIndex * 60).ms, duration: 250.ms)
+                .slideY(begin: 0.05, end: 0);
           }
 
           final addBudgetTile = InkWell(
@@ -349,7 +393,9 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Row(
@@ -422,8 +468,14 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Budgets', style: Theme.of(context).textTheme.headlineSmall),
-                      Text(month.label, style: Theme.of(context).textTheme.bodyMedium),
+                      Text(
+                        'Budgets',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      Text(
+                        month.label,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -432,6 +484,12 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                   budgetSection,
                   const SizedBox(height: 8),
                   addBudgetTile,
+                  const SizedBox(height: 24),
+                  YearlySavingsGoalCard(
+                    profile: widget.profile,
+                    budgetRepository: widget.budgetRepository,
+                    transactionRepository: widget.transactionRepository,
+                  ),
                 ],
               );
             },
