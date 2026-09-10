@@ -90,6 +90,7 @@ class _RecurringRuleListScreenState extends State<RecurringRuleListScreen> {
       profileId: widget.profile.id,
       accountId: result.accountId,
       categoryId: result.categoryId,
+      toAccountId: result.toAccountId,
       type: result.type,
       amountMinorUnits: result.amountMinorUnits,
       frequency: result.frequency,
@@ -148,7 +149,16 @@ class _RecurringRuleListScreenState extends State<RecurringRuleListScreen> {
                 final rule = data.rules[index];
                 final category = categoriesById[rule.categoryId];
                 final account = accountsById[rule.accountId];
+                final toAccount = accountsById[rule.toAccountId];
                 final isIncome = rule.type == TransactionKind.income;
+                final title = rule.isTransfer
+                    ? '${account?.name ?? 'Account'} → ${toAccount?.name ?? 'Account'}'
+                    : (category?.name ?? 'Uncategorized');
+                final subtitle = rule.isTransfer
+                    ? '${rule.frequency.label} · '
+                          'next ${DateFormat.MMMd().format(rule.nextDueDate)}'
+                    : '${rule.frequency.label} · ${account?.name ?? ''} · '
+                          'next ${DateFormat.MMMd().format(rule.nextDueDate)}';
                 return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Card(
@@ -164,19 +174,20 @@ class _RecurringRuleListScreenState extends State<RecurringRuleListScreen> {
                                 .primary
                                 .withValues(alpha: 0.15),
                             child: Icon(
-                              LucideIcons.repeat,
+                              rule.isTransfer
+                                  ? LucideIcons.arrowRightLeft
+                                  : LucideIcons.repeat,
                               color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
-                          title: Text(category?.name ?? 'Uncategorized'),
-                          subtitle: Text(
-                            '${rule.frequency.label} · ${account?.name ?? ''} · '
-                            'next ${DateFormat.MMMd().format(rule.nextDueDate)}',
-                          ),
+                          title: Text(title),
+                          subtitle: Text(subtitle),
                           trailing: MoneyText(
-                            isIncome
+                            rule.isTransfer
                                 ? rule.amountMinorUnits
-                                : -rule.amountMinorUnits,
+                                : (isIncome
+                                      ? rule.amountMinorUnits
+                                      : -rule.amountMinorUnits),
                             fontSize: 15,
                           ),
                           onLongPress: () => _confirmRemove(rule),

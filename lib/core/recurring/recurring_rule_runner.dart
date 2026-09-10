@@ -28,16 +28,28 @@ class RecurringRuleRunner {
       var due = rule.nextDueDate;
       var iterations = 0;
       while (!due.isAfter(todayDateOnly) && iterations < _maxCatchUpPerRule) {
-        await transactionRepository.createTransaction(
-          profileId: rule.profileId,
-          accountId: rule.accountId,
-          categoryId: rule.categoryId,
-          amountMinorUnits: rule.amountMinorUnits,
-          type: rule.type,
-          occurredAt: due,
-          note: rule.note,
-          recurringRuleId: rule.id,
-        );
+        if (rule.isTransfer) {
+          await transactionRepository.createTransfer(
+            profileId: rule.profileId,
+            fromAccountId: rule.accountId,
+            toAccountId: rule.toAccountId!,
+            amountMinorUnits: rule.amountMinorUnits,
+            occurredAt: due,
+            note: rule.note,
+            recurringRuleId: rule.id,
+          );
+        } else {
+          await transactionRepository.createTransaction(
+            profileId: rule.profileId,
+            accountId: rule.accountId,
+            categoryId: rule.categoryId!,
+            amountMinorUnits: rule.amountMinorUnits,
+            type: rule.type,
+            occurredAt: due,
+            note: rule.note,
+            recurringRuleId: rule.id,
+          );
+        }
         createdAny = true;
         due = rule.frequency.next(due);
         iterations++;

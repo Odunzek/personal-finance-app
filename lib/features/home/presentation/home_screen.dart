@@ -31,6 +31,7 @@ class HomeScreen extends StatefulWidget {
   final CategoryRepository categoryRepository;
   final AccountRepository accountRepository;
   final VoidCallback? onDataChanged;
+  final VoidCallback? onOpenSettings;
 
   HomeScreen({
     super.key,
@@ -39,6 +40,7 @@ class HomeScreen extends StatefulWidget {
     CategoryRepository? categoryRepository,
     AccountRepository? accountRepository,
     this.onDataChanged,
+    this.onOpenSettings,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
        categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
@@ -130,13 +132,26 @@ class _HomeScreenState extends State<HomeScreen> {
     final balanceBlock = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.profile.displayName.toUpperCase(),
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-            letterSpacing: 1.6,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                widget.profile.displayName.toUpperCase(),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  letterSpacing: 1.6,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (widget.onOpenSettings != null)
+              IconButton(
+                onPressed: widget.onOpenSettings,
+                icon: const Icon(LucideIcons.settings, size: 20),
+                tooltip: 'Settings',
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
         ),
         const SizedBox(height: 12),
         Text('Net worth', style: Theme.of(context).textTheme.bodyMedium),

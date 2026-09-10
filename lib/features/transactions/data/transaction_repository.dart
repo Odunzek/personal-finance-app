@@ -34,6 +34,7 @@ abstract class TransactionRepository {
     required int amountMinorUnits,
     required DateTime occurredAt,
     String? note,
+    int? recurringRuleId,
   });
 
   Future<void> updateTransaction(
@@ -136,6 +137,7 @@ class SupabaseTransactionRepository implements TransactionRepository {
     required int amountMinorUnits,
     required DateTime occurredAt,
     String? note,
+    int? recurringRuleId,
   }) async {
     final row = await supabase
         .from('transactions')
@@ -148,6 +150,7 @@ class SupabaseTransactionRepository implements TransactionRepository {
           'type': TransactionKind.transfer.toDb(),
           'occurred_at': occurredAt.toUtc().toIso8601String(),
           'note': note,
+          'recurring_rule_id': recurringRuleId,
         })
         .select()
         .single();

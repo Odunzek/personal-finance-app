@@ -8,6 +8,7 @@ abstract class AccountRepository {
     required int profileId,
     required String name,
     required AccountType type,
+    DebtKind? debtKind,
     required int startingBalanceMinorUnits,
   });
 
@@ -37,6 +38,7 @@ class SupabaseAccountRepository implements AccountRepository {
     required int profileId,
     required String name,
     required AccountType type,
+    DebtKind? debtKind,
     required int startingBalanceMinorUnits,
   }) async {
     final row = await supabase
@@ -45,6 +47,7 @@ class SupabaseAccountRepository implements AccountRepository {
           'profile_id': profileId,
           'name': name,
           'type': type.toDb(),
+          'debt_kind': debtKind?.toDb(),
           'starting_balance_minor_units': startingBalanceMinorUnits,
         })
         .select()

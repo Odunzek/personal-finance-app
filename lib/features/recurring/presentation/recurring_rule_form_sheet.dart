@@ -8,7 +8,8 @@ import '../../../core/models/transaction.dart';
 
 class RecurringRuleFormResult {
   final int accountId;
-  final int categoryId;
+  final int? categoryId;
+  final int? toAccountId;
   final TransactionKind type;
   final int amountMinorUnits;
   final RecurringFrequency frequency;
@@ -18,6 +19,7 @@ class RecurringRuleFormResult {
   const RecurringRuleFormResult({
     required this.accountId,
     required this.categoryId,
+    required this.toAccountId,
     required this.type,
     required this.amountMinorUnits,
     required this.frequency,
@@ -59,6 +61,7 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
   TransactionKind _type = TransactionKind.expense;
   Category? _category;
   account_model.Account? _account;
+  account_model.Account? _toAccount;
   RecurringFrequency _frequency = RecurringFrequency.monthly;
   DateTime _nextDueDate = DateTime.now();
 
@@ -77,6 +80,13 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
   }
 
   void _syncCategoryForType() {
+    if (_type == TransactionKind.transfer) {
+      _category = null;
+      _toAccount = widget.accounts
+          .where((a) => a.id != _account?.id)
+          .firstOrNull;
+      return;
+    }
     final wanted = _type == TransactionKind.income
         ? CategoryType.income
         : CategoryType.expense;
@@ -96,11 +106,17 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
 
   void _submit() {
     final amount = double.tryParse(_amountController.text.trim()) ?? 0;
-    if (amount <= 0 || _category == null || _account == null) return;
+    if (amount <= 0 || _account == null) return;
+    final isTransfer = _type == TransactionKind.transfer;
+    if (isTransfer && (_toAccount == null || _toAccount!.id == _account!.id)) {
+      return;
+    }
+    if (!isTransfer && _category == null) return;
     Navigator.of(context).pop(
       RecurringRuleFormResult(
         accountId: _account!.id,
-        categoryId: _category!.id,
+        categoryId: isTransfer ? null : _category!.id,
+        toAccountId: isTransfer ? _toAccount!.id : null,
         type: _type,
         amountMinorUnits: (amount * 100).round(),
         frequency: _frequency,
@@ -114,6 +130,7 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isTransfer = _type == TransactionKind.transfer;
     final categoryOptions = widget.categories.where(
       (c) =>
           c.type ==
@@ -121,6 +138,7 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
               ? CategoryType.income
               : CategoryType.expense),
     );
+    final toAccountOptions = widget.accounts.where((a) => a.id != _account?.id);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -150,6 +168,10 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
                   value: TransactionKind.income,
                   label: Text('Income'),
                 ),
+                ButtonSegment(
+                  value: TransactionKind.transfer,
+                  label: Text('Transfer'),
+                ),
               ],
               selected: {_type},
               onSelectionChanged: (s) => setState(() {
@@ -170,22 +192,27 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Category', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final c in categoryOptions)
-                  ChoiceChip(
-                    label: Text(c.name),
-                    selected: _category?.id == c.id,
-                    onSelected: (_) => setState(() => _category = c),
-                  ),
-              ],
+            if (!isTransfer) ...[
+              Text('Category', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final c in categoryOptions)
+                    ChoiceChip(
+                      label: Text(c.name),
+                      selected: _category?.id == c.id,
+                      onSelected: (_) => setState(() => _category = c),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              isTransfer ? 'From account' : 'Account',
+              style: Theme.of(context).textTheme.labelLarge,
             ),
-            const SizedBox(height: 16),
-            Text('Account', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -195,10 +222,30 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
                   ChoiceChip(
                     label: Text(a.name),
                     selected: _account?.id == a.id,
-                    onSelected: (_) => setState(() => _account = a),
+                    onSelected: (_) => setState(() {
+                      _account = a;
+                      if (isTransfer) _syncCategoryForType();
+                    }),
                   ),
               ],
             ),
+            if (isTransfer) ...[
+              const SizedBox(height: 16),
+              Text('To account', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final a in toAccountOptions)
+                    ChoiceChip(
+                      label: Text(a.name),
+                      selected: _toAccount?.id == a.id,
+                      onSelected: (_) => setState(() => _toAccount = a),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             Text('Repeats', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),

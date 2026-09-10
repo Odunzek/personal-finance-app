@@ -8,6 +8,7 @@ import '../../../core/widgets/mural_background.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../budgets/presentation/budgets_screen.dart';
 import '../../recurring/data/recurring_rule_repository.dart';
+import '../../recurring/presentation/recurring_rule_list_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/presentation/activity_screen.dart';
@@ -67,10 +68,26 @@ class _MainShellState extends State<MainShell> {
 
   void _bumpRefresh() => setState(() => _refreshTick++);
 
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SettingsScreen(
+          profile: widget.profile,
+          authRepository: widget.authRepository,
+          onDataChanged: _bumpRefresh,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tabs = [
-      HomeScreen(key: ValueKey('home-$_refreshTick'), profile: widget.profile),
+      HomeScreen(
+        key: ValueKey('home-$_refreshTick'),
+        profile: widget.profile,
+        onOpenSettings: _openSettings,
+      ),
       ActivityScreen(
         key: ValueKey('activity-$_refreshTick'),
         profile: widget.profile,
@@ -83,10 +100,9 @@ class _MainShellState extends State<MainShell> {
         key: ValueKey('trends-$_refreshTick'),
         profile: widget.profile,
       ),
-      SettingsScreen(
+      RecurringRuleListScreen(
+        key: ValueKey('recurring-$_refreshTick'),
         profile: widget.profile,
-        authRepository: widget.authRepository,
-        onDataChanged: _bumpRefresh,
       ),
     ];
 
@@ -101,10 +117,7 @@ class _MainShellState extends State<MainShell> {
         icon: Icon(LucideIcons.trendingUp),
         label: 'Trends',
       ),
-      NavigationDestination(
-        icon: Icon(LucideIcons.settings),
-        label: 'Settings',
-      ),
+      NavigationDestination(icon: Icon(LucideIcons.repeat), label: 'Recurring'),
     ];
     final railDestinations = const [
       NavigationRailDestination(
@@ -124,8 +137,8 @@ class _MainShellState extends State<MainShell> {
         label: Text('Trends'),
       ),
       NavigationRailDestination(
-        icon: Icon(LucideIcons.settings),
-        label: Text('Settings'),
+        icon: Icon(LucideIcons.repeat),
+        label: Text('Recurring'),
       ),
     ];
     final isTablet = MediaQuery.sizeOf(context).width >= kTabletBreakpoint;

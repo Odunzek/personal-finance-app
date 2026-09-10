@@ -8,10 +8,14 @@ String _dateOnly(DateTime d) =>
 abstract class RecurringRuleRepository {
   Future<List<RecurringRule>> listActiveRules(int profileId);
 
+  /// [categoryId] is required for income/expense rules and must be null for
+  /// transfers; [toAccountId] is required for transfers (the destination
+  /// account) and must be null otherwise.
   Future<RecurringRule> createRule({
     required int profileId,
     required int accountId,
-    required int categoryId,
+    int? categoryId,
+    int? toAccountId,
     required TransactionKind type,
     required int amountMinorUnits,
     required RecurringFrequency frequency,
@@ -45,7 +49,8 @@ class SupabaseRecurringRuleRepository implements RecurringRuleRepository {
   Future<RecurringRule> createRule({
     required int profileId,
     required int accountId,
-    required int categoryId,
+    int? categoryId,
+    int? toAccountId,
     required TransactionKind type,
     required int amountMinorUnits,
     required RecurringFrequency frequency,
@@ -58,6 +63,7 @@ class SupabaseRecurringRuleRepository implements RecurringRuleRepository {
           'profile_id': profileId,
           'account_id': accountId,
           'category_id': categoryId,
+          'to_account_id': toAccountId,
           'type': type.toDb(),
           'amount_minor_units': amountMinorUnits,
           'frequency': frequency.toDb(),

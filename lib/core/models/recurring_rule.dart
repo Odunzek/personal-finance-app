@@ -30,7 +30,8 @@ class RecurringRule {
   final int id;
   final int profileId;
   final int accountId;
-  final int categoryId;
+  final int? categoryId;
+  final int? toAccountId;
   final TransactionKind type;
   final int amountMinorUnits;
   final RecurringFrequency frequency;
@@ -43,6 +44,7 @@ class RecurringRule {
     required this.profileId,
     required this.accountId,
     required this.categoryId,
+    required this.toAccountId,
     required this.type,
     required this.amountMinorUnits,
     required this.frequency,
@@ -51,12 +53,15 @@ class RecurringRule {
     required this.isActive,
   });
 
+  bool get isTransfer => type == TransactionKind.transfer;
+
   factory RecurringRule.fromRow(Map<String, dynamic> row) {
     return RecurringRule(
       id: row['id'] as int,
       profileId: row['profile_id'] as int,
       accountId: row['account_id'] as int,
-      categoryId: row['category_id'] as int,
+      categoryId: row['category_id'] as int?,
+      toAccountId: row['to_account_id'] as int?,
       type: TransactionKind.fromDb(row['type'] as String),
       amountMinorUnits: row['amount_minor_units'] as int,
       frequency: RecurringFrequency.fromDb(row['frequency'] as String),

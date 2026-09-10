@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/account.dart';
 import '../../../core/models/account_balance.dart';
+import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart';
 import '../../../core/widgets/money_text.dart';
@@ -70,6 +71,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
       profileId: widget.profile.id,
       name: result.name,
       type: result.type,
+      debtKind: result.debtKind,
       startingBalanceMinorUnits: result.startingBalanceMinorUnits,
     );
     _reload();
@@ -120,10 +122,14 @@ class _AccountListScreenState extends State<AccountListScreen> {
             if (data.accounts.isEmpty) {
               return _EmptyState(onAdd: _addAccount);
             }
+            final debtSummary = _debtSummary(context, data);
+            final headerCount = debtSummary == null ? 0 : 1;
             return ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-              itemCount: data.accounts.length,
-              itemBuilder: (context, index) {
+              itemCount: data.accounts.length + headerCount,
+              itemBuilder: (context, i) {
+                if (debtSummary != null && i == 0) return debtSummary;
+                final index = i - headerCount;
                 final account = data.accounts[index];
                 final balance = computeAccountBalance(
                   account,
@@ -147,7 +153,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                       .withValues(alpha: 0.15),
                             child: Icon(
                               isLiability
-                                  ? LucideIcons.creditCard
+                                  ? _debtIcon(account.debtKind)
                                   : LucideIcons.wallet,
                               color: isLiability
                                   ? Theme.of(context).colorScheme.error
@@ -156,7 +162,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
                           ),
                           title: Text(account.name),
                           subtitle: Text(
-                            isLiability ? 'Credit card' : 'Checking / Cash',
+                            isLiability
+                                ? (account.debtKind?.label ?? 'Debt')
+                                : 'Checking / Cash',
                           ),
                           trailing: MoneyText(
                             isLiability ? -balance : balance,
@@ -175,6 +183,64 @@ class _AccountListScreenState extends State<AccountListScreen> {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  IconData _debtIcon(DebtKind? kind) => switch (kind) {
+    DebtKind.creditCard => LucideIcons.creditCard,
+    DebtKind.loan => LucideIcons.landmark,
+    DebtKind.bnpl => LucideIcons.repeat,
+    DebtKind.other => LucideIcons.creditCard,
+    null => LucideIcons.creditCard,
+  };
+
+  /// A combined "total debt" card broken down by kind, only shown once
+  /// there's more than one debt account to actually total up.
+  Widget? _debtSummary(BuildContext context, _AccountsData data) {
+    final liabilities = data.accounts
+        .where((a) => a.type == AccountType.liability)
+        .toList();
+    if (liabilities.length < 2) return null;
+
+    final byKind = <DebtKind, int>{};
+    for (final account in liabilities) {
+      final owed = -computeAccountBalance(account, data.transactions);
+      final kind = account.debtKind ?? DebtKind.other;
+      byKind[kind] = (byKind[kind] ?? 0) + owed;
+    }
+    final total = byKind.values.fold<int>(0, (sum, v) => sum + v);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Total debt', style: Theme.of(context).textTheme.bodyMedium),
+              MoneyText(
+                total,
+                fontSize: 28,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 16,
+                runSpacing: 6,
+                children: [
+                  for (final entry in byKind.entries)
+                    Text(
+                      '${entry.key.label}: ${formatMoney(entry.value)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

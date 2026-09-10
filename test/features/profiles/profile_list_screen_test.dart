@@ -122,6 +122,7 @@ class _FakeAccountRepository implements AccountRepository {
     required int profileId,
     required String name,
     required AccountType type,
+    DebtKind? debtKind,
     required int startingBalanceMinorUnits,
   }) async {
     final account = Account(
@@ -129,6 +130,7 @@ class _FakeAccountRepository implements AccountRepository {
       profileId: profileId,
       name: name,
       type: type,
+      debtKind: debtKind,
       startingBalanceMinorUnits: startingBalanceMinorUnits,
       isActive: true,
       sortOrder: 0,
