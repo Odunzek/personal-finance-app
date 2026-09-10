@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/money.dart';
 import '../../../core/models/month_range.dart';
@@ -135,40 +136,38 @@ class _TrendsScreenState extends State<TrendsScreen> {
         final breakdownTotal = breakdown.values.fold<int>(0, (a, b) => a + b);
         final isCurrentMonth = _selectedMonthIndex == 5;
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
-          children: [
-            Text('Trends', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        final chartCard = Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          LucideIcons.trendingUp,
-                          size: 18,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        Text('Income vs expense, last 6 months', style: Theme.of(context).textTheme.bodyMedium),
-                        const Spacer(),
-                        _LegendDot(color: Theme.of(context).colorScheme.primary, label: 'Income'),
-                        const SizedBox(width: 10),
-                        _LegendDot(color: Theme.of(context).colorScheme.error, label: 'Expense'),
-                      ],
+                    Icon(
+                      LucideIcons.trendingUp,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(width: 8),
                     Text(
-                      'Tap a month to see its breakdown below.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      'Income vs expense, last 6 months',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
+                    const Spacer(),
+                    _LegendDot(color: Theme.of(context).colorScheme.primary, label: 'Income'),
+                    const SizedBox(width: 10),
+                    _LegendDot(color: Theme.of(context).colorScheme.error, label: 'Expense'),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tap a month to see its breakdown below.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
                       height: 160,
                       child: BarChart(
                         duration: 700.ms,
@@ -275,96 +274,117 @@ class _TrendsScreenState extends State<TrendsScreen> {
                   ],
                 ),
               ),
-            ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
-            const SizedBox(height: 12),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0);
+
+        final breakdownCard = Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          LucideIcons.chartPie,
-                          size: 18,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          isCurrentMonth
-                              ? 'Where it went this month'
-                              : 'Where it went in ${data.monthLabels[_selectedMonthIndex]}',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
+                    Icon(
+                      LucideIcons.chartPie,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(height: 12),
-                    if (breakdown.isEmpty)
-                      const Text('No spending recorded that month.')
-                    else
-                      ...breakdown.entries.toList().asMap().entries.map(
-                        (indexed) {
-                          final entry = indexed.value;
-                          final share = breakdownTotal == 0
-                              ? 0.0
-                              : entry.value / breakdownTotal;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    CategoryBadge(
-                                      icon: iconForKey(entry.key.iconKey),
-                                      color: Color(entry.key.colorArgb),
-                                      size: 28,
-                                      iconSize: 14,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(child: Text(entry.key.name)),
-                                    Text(
-                                      '${(share * 100).round()}%',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    MoneyText(entry.value, fontSize: 14),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(3),
-                                  child: TweenAnimationBuilder<double>(
-                                    tween: Tween(begin: 0, end: share),
-                                    duration: 500.ms,
-                                    curve: Curves.easeOutCubic,
-                                    builder: (context, value, _) =>
-                                        LinearProgressIndicator(
-                                      value: value,
-                                      minHeight: 6,
-                                      backgroundColor:
-                                          Theme.of(context).colorScheme.surfaceContainerHighest,
-                                      color: Color(entry.key.colorArgb),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ).animate().fadeIn(
-                            delay: (indexed.key * 50).ms,
-                            duration: 200.ms,
-                          );
-                        },
-                      ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isCurrentMonth
+                          ? 'Where it went this month'
+                          : 'Where it went in ${data.monthLabels[_selectedMonthIndex]}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ],
                 ),
-              ),
-            ).animate().fadeIn(delay: 80.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
-          ],
+                const SizedBox(height: 12),
+                if (breakdown.isEmpty)
+                  const Text('No spending recorded that month.')
+                else
+                  ...breakdown.entries.toList().asMap().entries.map(
+                    (indexed) {
+                      final entry = indexed.value;
+                      final share = breakdownTotal == 0 ? 0.0 : entry.value / breakdownTotal;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CategoryBadge(
+                                  icon: iconForKey(entry.key.iconKey),
+                                  color: Color(entry.key.colorArgb),
+                                  size: 28,
+                                  iconSize: 14,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(entry.key.name)),
+                                Text(
+                                  '${(share * 100).round()}%',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                MoneyText(entry.value, fontSize: 14),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0, end: share),
+                                duration: 500.ms,
+                                curve: Curves.easeOutCubic,
+                                builder: (context, value, _) => LinearProgressIndicator(
+                                  value: value,
+                                  minHeight: 6,
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                                  color: Color(entry.key.colorArgb),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: (indexed.key * 50).ms, duration: 200.ms);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ).animate().fadeIn(delay: 80.ms, duration: 300.ms).slideY(begin: 0.05, end: 0);
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth >= kTabletBreakpoint;
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+              children: [
+                Text('Trends', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 16),
+                if (isTablet)
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(flex: 6, child: chartCard),
+                        const SizedBox(width: 12),
+                        Expanded(flex: 5, child: breakdownCard),
+                      ],
+                    ),
+                  )
+                else ...[
+                  chartCard,
+                  const SizedBox(height: 12),
+                  breakdownCard,
+                ],
+              ],
+            );
+          },
         );
       },
     );

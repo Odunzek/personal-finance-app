@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/budget.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/month_range.dart';
@@ -196,208 +197,243 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
               ? 0.0
               : (savedSoFar / data.savingsTarget!.targetMinorUnits).clamp(0, 1).toDouble();
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Budgets', style: Theme.of(context).textTheme.headlineSmall),
-                  Text(month.label, style: Theme.of(context).textTheme.bodyMedium),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Card(
-                margin: EdgeInsets.zero,
-                child: InkWell(
-                  onTap: () => _editSavingsTarget(data),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        BudgetRing(
-                          ratio: savingsRatio,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 64,
-                          strokeWidth: 7,
-                          center: Text(
-                            '${(savingsRatio * 100).round()}%',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+          final savingsCard = Card(
+            margin: EdgeInsets.zero,
+            child: InkWell(
+              onTap: () => _editSavingsTarget(data),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    BudgetRing(
+                      ratio: savingsRatio,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 64,
+                      strokeWidth: 7,
+                      center: Text(
+                        '${(savingsRatio * 100).round()}%',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    LucideIcons.piggyBank,
-                                    size: 18,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Savings target',
-                                    style: Theme.of(context).textTheme.titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                ],
+                              Icon(
+                                LucideIcons.piggyBank,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
-                              const SizedBox(height: 6),
-                              if (data.savingsTarget == null)
-                                const Text('Tap to set a monthly savings goal')
-                              else
-                                Row(
-                                  children: [
-                                    MoneyText(savedSoFar, fontSize: 15),
-                                    const Text(' of your '),
-                                    MoneyText(
-                                      data.savingsTarget!.targetMinorUnits,
-                                      fontSize: 15,
-                                    ),
-                                    const Text(' goal'),
-                                  ],
-                                ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Savings target',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                              ),
                             ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          if (data.savingsTarget == null)
+                            const Text('Tap to set a monthly savings goal')
+                          else
+                            Row(
+                              children: [
+                                MoneyText(savedSoFar, fontSize: 15),
+                                const Text(' of your '),
+                                MoneyText(data.savingsTarget!.targetMinorUnits, fontSize: 15),
+                                const Text(' goal'),
+                              ],
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
-              const SizedBox(height: 12),
-              Card(
-                margin: EdgeInsets.zero,
+              ),
+            ),
+          ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0);
+
+          final leftToSpendCard = Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.wallet,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text('Left to spend', style: Theme.of(context).textTheme.bodyMedium),
+                    ],
+                  ),
+                  MoneyText((totalLimit - totalSpent).clamp(0, 1 << 62), fontSize: 20),
+                ],
+              ),
+            ),
+          ).animate().fadeIn(delay: 60.ms, duration: 300.ms).slideY(begin: 0.05, end: 0);
+
+          Widget budgetCard(int budgetIndex, Budget b) {
+            final category = categoriesById[b.categoryId];
+            if (category == null) return const SizedBox.shrink();
+            final spent = data.spentByCategoryId[b.categoryId] ?? 0;
+            final ratio = b.limitMinorUnits == 0 ? 0.0 : (spent / b.limitMinorUnits).clamp(0, 1.5);
+            final color = ratio >= 1
+                ? Theme.of(context).colorScheme.error
+                : ratio >= 0.7
+                ? const Color(0xFFC98A16)
+                : Theme.of(context).colorScheme.primary;
+            return Card(
+              margin: EdgeInsets.zero,
+              child: InkWell(
+                onTap: () => _editBudget(data, category, b),
+                borderRadius: BorderRadius.circular(16),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            LucideIcons.wallet,
-                            size: 18,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 8),
-                          Text('Left to spend', style: Theme.of(context).textTheme.bodyMedium),
-                        ],
-                      ),
-                      MoneyText(
-                        (totalLimit - totalSpent).clamp(0, 1 << 62),
-                        fontSize: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ).animate().fadeIn(delay: 60.ms, duration: 300.ms).slideY(begin: 0.05, end: 0),
-              const SizedBox(height: 20),
-              if (data.budgets.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('No budgets set yet. Tap below to add one.'),
-                )
-              else
-                ...data.budgets.asMap().entries.map((indexed) {
-                  final budgetIndex = indexed.key;
-                  final b = indexed.value;
-                  final category = categoriesById[b.categoryId];
-                  if (category == null) return const SizedBox.shrink();
-                  final spent = data.spentByCategoryId[b.categoryId] ?? 0;
-                  final ratio = b.limitMinorUnits == 0
-                      ? 0.0
-                      : (spent / b.limitMinorUnits).clamp(0, 1.5);
-                  final color = ratio >= 1
-                      ? Theme.of(context).colorScheme.error
-                      : ratio >= 0.7
-                      ? const Color(0xFFC98A16)
-                      : Theme.of(context).colorScheme.primary;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Card(
-                      margin: EdgeInsets.zero,
-                      child: InkWell(
-                        onTap: () => _editBudget(data, category, b),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              BudgetRing(
-                                ratio: ratio.toDouble(),
-                                color: color,
-                                size: 44,
-                                strokeWidth: 5,
-                                center: Text(
-                                  '${(ratio * 100).round()}%',
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      category.name,
-                                      style: const TextStyle(fontWeight: FontWeight.w500),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        MoneyText(spent, fontSize: 13),
-                                        Text(
-                                          ' of ',
-                                          style: Theme.of(context).textTheme.bodySmall,
-                                        ),
-                                        MoneyText(b.limitMinorUnits, fontSize: 13),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                      BudgetRing(
+                        ratio: ratio.toDouble(),
+                        color: color,
+                        size: 44,
+                        strokeWidth: 5,
+                        center: Text(
+                          '${(ratio * 100).round()}%',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
-                    ),
-                  ).animate().fadeIn(
-                    delay: (budgetIndex * 60).ms,
-                    duration: 250.ms,
-                  ).slideY(begin: 0.05, end: 0);
-                }),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () => _pickCategoryToBudget(data),
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(LucideIcons.plus, size: 18),
-                      SizedBox(width: 8),
-                      Text('Add a budget'),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              category.name,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                MoneyText(spent, fontSize: 13),
+                                Text(' of ', style: Theme.of(context).textTheme.bodySmall),
+                                MoneyText(b.limitMinorUnits, fontSize: 13),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-            ],
+            ).animate().fadeIn(delay: (budgetIndex * 60).ms, duration: 250.ms).slideY(begin: 0.05, end: 0);
+          }
+
+          final addBudgetTile = InkWell(
+            onTap: () => _pickCategoryToBudget(data),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(LucideIcons.plus, size: 18),
+                  SizedBox(width: 8),
+                  Text('Add a budget'),
+                ],
+              ),
+            ),
+          );
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isTablet = constraints.maxWidth >= kTabletBreakpoint;
+
+              final topRow = isTablet
+                  ? IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(flex: 3, child: savingsCard),
+                          const SizedBox(width: 12),
+                          Expanded(flex: 2, child: leftToSpendCard),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        savingsCard,
+                        const SizedBox(height: 12),
+                        leftToSpendCard,
+                      ],
+                    );
+
+              final budgetSection = data.budgets.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text('No budgets set yet. Tap below to add one.'),
+                    )
+                  : isTablet
+                  ? Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: data.budgets.asMap().entries.map((indexed) {
+                        final width = (constraints.maxWidth - 40 - 12) / 2;
+                        return SizedBox(
+                          width: width,
+                          child: budgetCard(indexed.key, indexed.value),
+                        );
+                      }).toList(),
+                    )
+                  : Column(
+                      children: data.budgets
+                          .asMap()
+                          .entries
+                          .map(
+                            (indexed) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: budgetCard(indexed.key, indexed.value),
+                            ),
+                          )
+                          .toList(),
+                    );
+
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Budgets', style: Theme.of(context).textTheme.headlineSmall),
+                      Text(month.label, style: Theme.of(context).textTheme.bodyMedium),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  topRow,
+                  const SizedBox(height: 20),
+                  budgetSection,
+                  const SizedBox(height: 8),
+                  addBudgetTile,
+                ],
+              );
+            },
           );
         },
       ),

@@ -142,44 +142,47 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
           if (categories.isEmpty) {
             return _EmptyState(onAdd: _addCategory);
           }
-          return ListView.builder(
+          return GridView.builder(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 420,
+              mainAxisExtent: 76,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
             itemCount: categories.length,
             itemBuilder: (context, index) {
               final category = categories[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Card(
-                  margin: EdgeInsets.zero,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    leading: CategoryBadge(
-                      icon: iconForKey(category.iconKey),
-                      color: Color(category.colorArgb),
-                    ),
-                    title: Text(category.name),
-                    subtitle: Text(
-                      category.type == CategoryType.income
-                          ? 'Income'
-                          : 'Expense',
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      icon: const Icon(LucideIcons.moreVertical),
-                      onSelected: (value) {
-                        if (value == 'edit') _editCategory(category);
-                        if (value == 'remove') _deactivateCategory(category);
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(value: 'edit', child: Text('Edit')),
-                        PopupMenuItem(value: 'remove', child: Text('Remove')),
-                      ],
-                    ),
+              return Card(
+                margin: EdgeInsets.zero,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  leading: CategoryBadge(
+                    icon: iconForKey(category.iconKey),
+                    color: Color(category.colorArgb),
+                  ),
+                  title: Text(category.name),
+                  subtitle: Text(
+                    category.type == CategoryType.income
+                        ? 'Income'
+                        : 'Expense',
+                  ),
+                  trailing: PopupMenuButton<String>(
+                    icon: const Icon(LucideIcons.moreVertical),
+                    onSelected: (value) {
+                      if (value == 'edit') _editCategory(category);
+                      if (value == 'remove') _deactivateCategory(category);
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      PopupMenuItem(value: 'remove', child: Text('Remove')),
+                    ],
                   ),
                 ),
-              ).animate().fadeIn(delay: (index * 40).ms, duration: 200.ms).slideX(begin: 0.03, end: 0);
+              ).animate().fadeIn(delay: (index * 40).ms, duration: 200.ms).scale(begin: const Offset(0.97, 0.97));
             },
           );
         },

@@ -279,58 +279,76 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Tablet: a real two-column dashboard grid (balance | stats), with
-        // the recent list spanning the full width below — matching the
-        // "nav rail plus one wide column" tablet layout from the design.
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
-          children: [
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    flex: 6,
-                    child: Card(
-                      margin: EdgeInsets.zero,
-                      clipBehavior: Clip.antiAlias,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Positioned(
-                              top: -16,
-                              right: -30,
-                              child: OrbitWatermark(
-                                size: 150,
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+        // the recent list spanning the full width below and filling the
+        // remaining height — matching the "nav rail plus one wide column"
+        // tablet layout from the design, instead of leaving dead space.
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      flex: 6,
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        clipBehavior: Clip.antiAlias,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned(
+                                top: -16,
+                                right: -30,
+                                child: OrbitWatermark(
+                                  size: 150,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.14),
+                                ),
                               ),
-                            ),
-                            balanceBlock,
-                          ],
+                              balanceBlock,
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 5,
-                    child: Column(
-                      children: [
-                        Expanded(child: _StatCard(label: 'Income', amount: monthIncome)),
-                        const SizedBox(height: 12),
-                        Expanded(child: _StatCard(label: 'Expense', amount: monthExpense)),
-                      ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 5,
+                      child: Column(
+                        children: [
+                          Expanded(child: _StatCard(label: 'Income', amount: monthIncome)),
+                          const SizedBox(height: 12),
+                          Expanded(child: _StatCard(label: 'Expense', amount: monthExpense)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+              const SizedBox(height: 20),
+              recentHeader,
+              const SizedBox(height: 8),
+              Expanded(
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [for (var i = 0; i < recent.length; i++) recentTile(i)],
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
-            const SizedBox(height: 20),
-            recentHeader,
-            const SizedBox(height: 8),
-            recentCard,
-          ],
+            ],
+          ),
         );
       },
     );
