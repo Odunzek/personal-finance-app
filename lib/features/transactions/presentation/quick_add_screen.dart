@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/widgets/category_badge.dart';
@@ -9,8 +10,6 @@ import '../../../core/widgets/money_text.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
-
-const _tabletBreakpoint = 700.0;
 
 class QuickAddScreen extends StatefulWidget {
   final Profile profile;
@@ -124,7 +123,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            if (constraints.maxWidth >= _tabletBreakpoint) {
+            if (constraints.maxWidth >= kTabletBreakpoint) {
               return Row(
                 children: [
                   Expanded(

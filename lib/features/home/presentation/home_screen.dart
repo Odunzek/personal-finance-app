@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
@@ -169,117 +170,169 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final recent = data.all.take(5).toList();
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+    final balanceBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              top: -24,
-              right: -60,
-              child: OrbitWatermark(
-                size: 200,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.profile.displayName.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    letterSpacing: 1.6,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text('Total balance', style: Theme.of(context).textTheme.bodyMedium),
-                AnimatedMoneyText(balance, fontSize: 46),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      weekNet >= 0 ? LucideIcons.trendingUp : LucideIcons.trendingDown,
-                      size: 14,
-                      color: weekNet >= 0
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(width: 4),
-                    MoneyText(
-                      weekNet,
-                      showSign: true,
-                      fontSize: 14,
-                      color: weekNet >= 0
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.error,
-                    ),
-                    Text(
-                      ' this week',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(child: _StatCard(label: 'Income', amount: monthIncome)),
-            const SizedBox(width: 12),
-            Expanded(child: _StatCard(label: 'Expense', amount: monthExpense)),
-          ],
-        ).animate().fadeIn(delay: 100.ms, duration: 350.ms).slideY(begin: 0.08, end: 0),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Text(
-              'Recent',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              children: [
-                for (var i = 0; i < recent.length; i++)
-                  TransactionTile(
-                    transaction: recent[i],
-                    category: data.categoriesById[recent[i].categoryId],
-                    onTap: () async {
-                      final t = recent[i];
-                      final changed = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(
-                          builder: (_) => TransactionDetailScreen(
-                            transaction: t,
-                            category: data.categoriesById[t.categoryId],
-                          ),
-                        ),
-                      );
-                      if (changed == true) {
-                        _reload();
-                        widget.onDataChanged?.call();
-                      }
-                    },
-                  ).animate().fadeIn(
-                    delay: (150 + i * 50).ms,
-                    duration: 250.ms,
-                  ).slideX(begin: 0.03, end: 0),
-              ],
-            ),
+        Text(
+          widget.profile.displayName.toUpperCase(),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            letterSpacing: 1.6,
+            fontWeight: FontWeight.w600,
           ),
         ),
+        const SizedBox(height: 12),
+        Text('Total balance', style: Theme.of(context).textTheme.bodyMedium),
+        AnimatedMoneyText(balance, fontSize: 46),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(
+              weekNet >= 0 ? LucideIcons.trendingUp : LucideIcons.trendingDown,
+              size: 14,
+              color: weekNet >= 0
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(width: 4),
+            MoneyText(
+              weekNet,
+              showSign: true,
+              fontSize: 14,
+              color: weekNet >= 0
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.error,
+            ),
+            Text(' this week', style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
       ],
+    );
+
+    Widget recentTile(int i) => TransactionTile(
+      transaction: recent[i],
+      category: data.categoriesById[recent[i].categoryId],
+      onTap: () async {
+        final t = recent[i];
+        final changed = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => TransactionDetailScreen(
+              transaction: t,
+              category: data.categoriesById[t.categoryId],
+            ),
+          ),
+        );
+        if (changed == true) {
+          _reload();
+          widget.onDataChanged?.call();
+        }
+      },
+    ).animate().fadeIn(delay: (150 + i * 50).ms, duration: 250.ms).slideX(begin: 0.03, end: 0);
+
+    final recentHeader = Text(
+      'Recent',
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+    );
+
+    final recentCard = Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Column(children: [for (var i = 0; i < recent.length; i++) recentTile(i)]),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < kTabletBreakpoint) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    top: -24,
+                    right: -60,
+                    child: OrbitWatermark(
+                      size: 200,
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+                    ),
+                  ),
+                  balanceBlock,
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: _StatCard(label: 'Income', amount: monthIncome)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _StatCard(label: 'Expense', amount: monthExpense)),
+                ],
+              ).animate().fadeIn(delay: 100.ms, duration: 350.ms).slideY(begin: 0.08, end: 0),
+              const SizedBox(height: 24),
+              recentHeader,
+              const SizedBox(height: 8),
+              recentCard,
+            ],
+          );
+        }
+
+        // Tablet: a real two-column dashboard grid (balance | stats), with
+        // the recent list spanning the full width below — matching the
+        // "nav rail plus one wide column" tablet layout from the design.
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
+          children: [
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 6,
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      clipBehavior: Clip.antiAlias,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned(
+                              top: -16,
+                              right: -30,
+                              child: OrbitWatermark(
+                                size: 150,
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+                              ),
+                            ),
+                            balanceBlock,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      children: [
+                        Expanded(child: _StatCard(label: 'Income', amount: monthIncome)),
+                        const SizedBox(height: 12),
+                        Expanded(child: _StatCard(label: 'Expense', amount: monthExpense)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+            const SizedBox(height: 20),
+            recentHeader,
+            const SizedBox(height: 8),
+            recentCard,
+          ],
+        );
+      },
     );
   }
 }
