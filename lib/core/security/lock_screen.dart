@@ -61,11 +61,11 @@ class _LockScreenState extends State<LockScreen> {
         if (_entered.isNotEmpty) {
           _entered = _entered.substring(0, _entered.length - 1);
         }
-      } else if (_entered.length < 6) {
+      } else if (_entered.length < 4) {
         _entered += key;
       }
     });
-    if (_entered.length >= 4 && key != '⌫') {
+    if (_entered.length == 4 && key != '⌫') {
       _submit();
     }
   }
@@ -86,11 +86,14 @@ class _LockScreenState extends State<LockScreen> {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 16),
-                Text('Enter your PIN', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Enter your PIN',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(6, (i) {
+                  children: List.generate(4, (i) {
                     final filled = i < _entered.length;
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -102,7 +105,9 @@ class _LockScreenState extends State<LockScreen> {
                             ? Theme.of(context).colorScheme.error
                             : filled
                             ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                            : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                       ),
                     );
                   }),
@@ -115,7 +120,20 @@ class _LockScreenState extends State<LockScreen> {
                   crossAxisSpacing: 12,
                   childAspectRatio: 1.4,
                   children: [
-                    for (final k in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'])
+                    for (final k in [
+                      '1',
+                      '2',
+                      '3',
+                      '4',
+                      '5',
+                      '6',
+                      '7',
+                      '8',
+                      '9',
+                      '',
+                      '0',
+                      '⌫',
+                    ])
                       if (k.isEmpty)
                         const SizedBox.shrink()
                       else

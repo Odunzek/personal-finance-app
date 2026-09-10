@@ -1,9 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/account.dart';
@@ -46,7 +44,7 @@ class QuickAddScreen extends StatefulWidget {
 
 class _QuickAddScreenState extends State<QuickAddScreen> {
   final _noteController = TextEditingController();
-  String _amount = '0';
+  final _amountController = TextEditingController();
   TransactionKind _kind = TransactionKind.expense;
   Category? _selectedCategory;
   Account? _selectedAccount;
@@ -59,6 +57,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   @override
   void initState() {
     super.initState();
+    _amountController.addListener(() => setState(() {}));
     _categoriesFuture = widget.categoryRepository.listActiveCategories(
       widget.profile.id,
     );
@@ -77,25 +76,12 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   @override
   void dispose() {
     _noteController.dispose();
+    _amountController.dispose();
     super.dispose();
   }
 
-  void _pressKey(String key) {
-    setState(() {
-      if (key == '⌫') {
-        _amount = _amount.length > 1
-            ? _amount.substring(0, _amount.length - 1)
-            : '0';
-      } else if (key == '.') {
-        if (!_amount.contains('.')) _amount += '.';
-      } else {
-        if (_amount.contains('.') && _amount.split('.')[1].length >= 2) return;
-        _amount = _amount == '0' ? key : _amount + key;
-      }
-    });
-  }
-
-  int get _amountMinorUnits => ((double.tryParse(_amount) ?? 0) * 100).round();
+  int get _amountMinorUnits =>
+      ((double.tryParse(_amountController.text) ?? 0) * 100).round();
 
   bool get _canSave {
     if (_amountMinorUnits <= 0 || _saving) return false;
@@ -186,72 +172,37 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
         child: MuralBackground.ambient(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final content = _FormContent(
-                amount: _amount,
-                kind: _kind,
-                noteController: _noteController,
-                categoriesFuture: _categoriesFuture,
-                accountsFuture: _accountsFuture,
-                selectedCategory: _selectedCategory,
-                selectedAccount: _selectedAccount,
-                selectedToAccount: _selectedToAccount,
-                onKindChanged: (k) => setState(() {
-                  _kind = k;
-                  _selectedCategory = null;
-                }),
-                onCategorySelected: (c) =>
-                    setState(() => _selectedCategory = c),
-                onAccountSelected: (a) => setState(() => _selectedAccount = a),
-                onToAccountSelected: (a) =>
-                    setState(() => _selectedToAccount = a),
-                amountSize: constraints.maxWidth >= kTabletBreakpoint ? 64 : 44,
-              );
-
-              if (constraints.maxWidth >= kTabletBreakpoint) {
-                return Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(32),
-                        child: content,
-                      ),
+              final isTablet = constraints.maxWidth >= kTabletBreakpoint;
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isTablet ? 480 : double.infinity,
                     ),
-                    Container(
-                      width: 320,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerLow,
-                        border: Border(
-                          left: BorderSide(
-                            color: Theme.of(context).colorScheme.outlineVariant,
-                          ),
-                        ),
-                      ),
-                      child: Center(child: _Keypad(onPressed: _pressKey)),
-                    ),
-                  ],
-                );
-              }
-
-              return Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: content,
+                    child: _FormContent(
+                      amountController: _amountController,
+                      kind: _kind,
+                      noteController: _noteController,
+                      categoriesFuture: _categoriesFuture,
+                      accountsFuture: _accountsFuture,
+                      selectedCategory: _selectedCategory,
+                      selectedAccount: _selectedAccount,
+                      selectedToAccount: _selectedToAccount,
+                      onKindChanged: (k) => setState(() {
+                        _kind = k;
+                        _selectedCategory = null;
+                      }),
+                      onCategorySelected: (c) =>
+                          setState(() => _selectedCategory = c),
+                      onAccountSelected: (a) =>
+                          setState(() => _selectedAccount = a),
+                      onToAccountSelected: (a) =>
+                          setState(() => _selectedToAccount = a),
+                      amountSize: isTablet ? 64 : 44,
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 380),
-                      child: _Keypad(onPressed: _pressKey),
-                    ),
-                  ),
-                ],
+                ),
               );
             },
           ),
@@ -262,7 +213,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
 }
 
 class _FormContent extends StatelessWidget {
-  final String amount;
+  final TextEditingController amountController;
   final TransactionKind kind;
   final TextEditingController noteController;
   final Future<List<Category>> categoriesFuture;
@@ -277,7 +228,7 @@ class _FormContent extends StatelessWidget {
   final double amountSize;
 
   const _FormContent({
-    required this.amount,
+    required this.amountController,
     required this.kind,
     required this.noteController,
     required this.categoriesFuture,
@@ -303,9 +254,17 @@ class _FormContent extends StatelessWidget {
       children: [
         const SizedBox(height: 16),
         Text('Amount', style: Theme.of(context).textTheme.labelLarge),
-        Text(
-          '\$$amount',
+        TextField(
+          controller: amountController,
+          autofocus: true,
+          textAlign: TextAlign.center,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: MoneyText.style(context, fontSize: amountSize),
+          decoration: const InputDecoration(
+            prefixText: '\$',
+            hintText: '0',
+            border: InputBorder.none,
+          ),
         ),
         const SizedBox(height: 16),
         SegmentedButton<TransactionKind>(
@@ -489,92 +448,6 @@ class _AccountPicker extends StatelessWidget {
           }).toList(),
         ),
       ],
-    );
-  }
-}
-
-class _Keypad extends StatelessWidget {
-  final ValueChanged<String> onPressed;
-
-  const _Keypad({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      mainAxisSpacing: 2,
-      crossAxisSpacing: 2,
-      childAspectRatio: 1.5,
-      children: [
-        for (final k in [
-          '1',
-          '2',
-          '3',
-          '4',
-          '5',
-          '6',
-          '7',
-          '8',
-          '9',
-          '.',
-          '0',
-          '⌫',
-        ])
-          _KeypadButton(
-            label: k,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onPressed(k);
-            },
-          ),
-      ],
-    );
-  }
-}
-
-class _KeypadButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _KeypadButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isBackspace = label == '⌫';
-    return Center(
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: FractionallySizedBox(
-          widthFactor: 0.68,
-          heightFactor: 0.68,
-          child: Material(
-            color: isBackspace
-                ? scheme.errorContainer.withValues(alpha: 0.35)
-                : Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap,
-              child: Center(
-                child: isBackspace
-                    ? Icon(LucideIcons.delete, color: scheme.error, size: 22)
-                    : Text(
-                        label,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: label == '.'
-                                  ? scheme.onSurfaceVariant
-                                  : scheme.onSurface,
-                            ),
-                      ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

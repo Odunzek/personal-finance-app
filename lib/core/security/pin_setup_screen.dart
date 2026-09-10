@@ -72,12 +72,14 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     setState(() {
       _error = false;
       if (key == '⌫') {
-        if (_entered.isNotEmpty) _entered = _entered.substring(0, _entered.length - 1);
+        if (_entered.isNotEmpty) {
+          _entered = _entered.substring(0, _entered.length - 1);
+        }
         return;
       }
-      if (_entered.length < 6) _entered += key;
+      if (_entered.length < 4) _entered += key;
     });
-    if (_entered.length >= 4 && key != '⌫') _submit();
+    if (_entered.length == 4 && key != '⌫') _submit();
   }
 
   String get _title {
@@ -121,13 +123,15 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'That didn\'t match. Try again.',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(6, (i) {
+                  children: List.generate(4, (i) {
                     final filled = i < _entered.length;
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -139,7 +143,9 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                             ? Theme.of(context).colorScheme.error
                             : filled
                             ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                            : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                       ),
                     );
                   }),
@@ -152,7 +158,20 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                   crossAxisSpacing: 12,
                   childAspectRatio: 1.4,
                   children: [
-                    for (final k in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'])
+                    for (final k in [
+                      '1',
+                      '2',
+                      '3',
+                      '4',
+                      '5',
+                      '6',
+                      '7',
+                      '8',
+                      '9',
+                      '',
+                      '0',
+                      '⌫',
+                    ])
                       if (k.isEmpty)
                         const SizedBox.shrink()
                       else
