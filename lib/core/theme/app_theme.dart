@@ -41,8 +41,12 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: p.card,
         surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shadowColor: brightness == Brightness.dark
+            ? Colors.black.withValues(alpha: 0.55)
+            : AppColors.accent.withValues(alpha: 0.18),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           side: BorderSide(color: p.line),
         ),
       ),

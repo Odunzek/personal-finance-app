@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/widgets/category_badge.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
@@ -228,9 +230,7 @@ class _FormContent extends StatelessWidget {
         Text('Amount', style: Theme.of(context).textTheme.labelLarge),
         Text(
           '\$$amount',
-          style: Theme.of(
-            context,
-          ).textTheme.displaySmall?.copyWith(fontSize: amountSize),
+          style: MoneyText.style(context, fontSize: amountSize),
         ),
         const SizedBox(height: 16),
         SegmentedButton<CategoryType>(
@@ -287,11 +287,8 @@ class _FormContent extends StatelessWidget {
                         curve: Curves.easeOut,
                         child: AnimatedContainer(
                           duration: 180.ms,
-                          width: 56,
-                          height: 56,
                           decoration: BoxDecoration(
-                            color: Color(c.colorArgb),
-                            borderRadius: BorderRadius.circular(16),
+                            shape: BoxShape.circle,
                             border: selected
                                 ? Border.all(
                                     color: Theme.of(context).colorScheme.onSurface,
@@ -299,10 +296,12 @@ class _FormContent extends StatelessWidget {
                                   )
                                 : null,
                           ),
-                          child: Icon(
-                            iconForKey(c.iconKey),
-                            color: Colors.white,
-                            size: 24,
+                          padding: EdgeInsets.all(selected ? 3 : 0),
+                          child: CategoryBadge(
+                            icon: iconForKey(c.iconKey),
+                            color: Color(c.colorArgb),
+                            size: 56,
+                            iconSize: 24,
                           ),
                         ),
                       ),

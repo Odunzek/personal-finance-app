@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/category.dart';
-import '../../../core/models/money.dart';
 import '../../../core/widgets/animated_progress_bar.dart';
+import '../../../core/widgets/money_text.dart';
 
 class BudgetEditResult {
   final int limitMinorUnits;
@@ -107,9 +107,15 @@ class _BudgetEditSheetState extends State<_BudgetEditSheet> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 8),
-                Text(formatMoney(_limit), style: Theme.of(context).textTheme.displaySmall),
+                MoneyText(_limit, fontSize: 34),
                 const SizedBox(height: 8),
-                Text('${formatMoney(widget.spentMinorUnits)} spent so far this month'),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MoneyText(widget.spentMinorUnits, fontSize: 14),
+                    const Text(' spent so far this month'),
+                  ],
+                ),
               ],
             ),
           ),

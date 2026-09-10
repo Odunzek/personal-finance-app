@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/default_categories.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/widgets/category_badge.dart';
 import '../data/category_repository.dart';
 import 'category_form_sheet.dart';
 import 'category_style_options.dart';
@@ -155,18 +156,9 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                       horizontal: 16,
                       vertical: 4,
                     ),
-                    leading: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Color(category.colorArgb),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child: Icon(
-                        iconForKey(category.iconKey),
-                        color: Colors.white,
-                        size: 22,
-                      ),
+                    leading: CategoryBadge(
+                      icon: iconForKey(category.iconKey),
+                      color: Color(category.colorArgb),
                     ),
                     title: Text(category.name),
                     subtitle: Text(

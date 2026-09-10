@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/models/category.dart';
-import '../../../core/models/money.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/category_badge.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../categories/presentation/category_style_options.dart';
 
 class TransactionTile extends StatelessWidget {
@@ -30,18 +31,11 @@ class TransactionTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: category != null ? Color(category!.colorArgb) : Colors.grey,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Icon(
-          iconForKey(category?.iconKey ?? 'other'),
-          color: Colors.white,
-          size: 20,
-        ),
+      leading: CategoryBadge(
+        icon: iconForKey(category?.iconKey ?? 'other'),
+        color: category != null ? Color(category!.colorArgb) : null,
+        size: 40,
+        iconSize: 18,
       ),
       title: Text(
         transaction.note?.isNotEmpty == true
@@ -58,16 +52,10 @@ class TransactionTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: Text(
-        formatMoney(
-          isIncome ? transaction.amountMinorUnits : -transaction.amountMinorUnits,
-          showSign: true,
-        ),
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontFeatures: const [FontFeature.tabularFigures()],
-          color: color,
-        ),
+      trailing: MoneyText(
+        isIncome ? transaction.amountMinorUnits : -transaction.amountMinorUnits,
+        showSign: true,
+        color: color,
       ),
     );
   }

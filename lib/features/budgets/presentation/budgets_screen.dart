@@ -3,12 +3,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/budget.dart';
-import '../../../core/widgets/animated_progress_bar.dart';
 import '../../../core/models/category.dart';
-import '../../../core/models/money.dart';
 import '../../../core/models/month_range.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/budget_ring.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../categories/data/category_repository.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../data/budget_repository.dart';
@@ -214,31 +214,57 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                   borderRadius: BorderRadius.circular(16),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              LucideIcons.piggyBank,
-                              size: 18,
-                              color: Theme.of(context).colorScheme.primary,
+                        BudgetRing(
+                          ratio: savingsRatio,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 64,
+                          strokeWidth: 7,
+                          center: Text(
+                            '${(savingsRatio * 100).round()}%',
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Savings target',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        AnimatedProgressBar(value: savingsRatio),
-                        const SizedBox(height: 8),
-                        Text(
-                          data.savingsTarget == null
-                              ? 'Tap to set a monthly savings goal'
-                              : '${formatMoney(savedSoFar)} of your ${formatMoney(data.savingsTarget!.targetMinorUnits)} goal',
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    LucideIcons.piggyBank,
+                                    size: 18,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Savings target',
+                                    style: Theme.of(context).textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              if (data.savingsTarget == null)
+                                const Text('Tap to set a monthly savings goal')
+                              else
+                                Row(
+                                  children: [
+                                    MoneyText(savedSoFar, fontSize: 15),
+                                    const Text(' of your '),
+                                    MoneyText(
+                                      data.savingsTarget!.targetMinorUnits,
+                                      fontSize: 15,
+                                    ),
+                                    const Text(' goal'),
+                                  ],
+                                ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -264,10 +290,9 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                           Text('Left to spend', style: Theme.of(context).textTheme.bodyMedium),
                         ],
                       ),
-                      Text(
-                        formatMoney((totalLimit - totalSpent).clamp(0, 1 << 62)),
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                      MoneyText(
+                        (totalLimit - totalSpent).clamp(0, 1 << 62),
+                        fontSize: 20,
                       ),
                     ],
                   ),
@@ -303,21 +328,42 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                         borderRadius: BorderRadius.circular(16),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(category.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                                  Text('${formatMoney(spent)} of ${formatMoney(b.limitMinorUnits)}'),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              AnimatedProgressBar(
-                                value: ratio.toDouble(),
+                              BudgetRing(
+                                ratio: ratio.toDouble(),
                                 color: color,
-                                height: 6,
+                                size: 44,
+                                strokeWidth: 5,
+                                center: Text(
+                                  '${(ratio * 100).round()}%',
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      category.name,
+                                      style: const TextStyle(fontWeight: FontWeight.w500),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        MoneyText(spent, fontSize: 13),
+                                        Text(
+                                          ' of ',
+                                          style: Theme.of(context).textTheme.bodySmall,
+                                        ),
+                                        MoneyText(b.limitMinorUnits, fontSize: 13),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),

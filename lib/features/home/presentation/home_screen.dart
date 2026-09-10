@@ -3,9 +3,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/category.dart';
-import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/money_text.dart';
+import '../../../core/widgets/orbit_watermark.dart';
 import '../../categories/data/category_repository.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/presentation/transaction_detail_screen.dart';
@@ -95,12 +96,16 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         const SizedBox(height: 60),
         Text(
-          widget.profile.displayName,
-          style: Theme.of(context).textTheme.labelLarge,
+          widget.profile.displayName.toUpperCase(),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            letterSpacing: 1.6,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text('Total balance', style: Theme.of(context).textTheme.bodyMedium),
-        Text('\$0.00', style: Theme.of(context).textTheme.displaySmall),
+        const MoneyText(0, fontSize: 46),
         const SizedBox(height: 32),
         Container(
           padding: const EdgeInsets.all(24),
@@ -167,22 +172,60 @@ class _HomeScreenState extends State<HomeScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
       children: [
-        Text(
-          widget.profile.displayName,
-          style: Theme.of(context).textTheme.labelLarge,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -24,
+              right: -60,
+              child: OrbitWatermark(
+                size: 200,
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.profile.displayName.toUpperCase(),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    letterSpacing: 1.6,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('Total balance', style: Theme.of(context).textTheme.bodyMedium),
+                AnimatedMoneyText(balance, fontSize: 46),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      weekNet >= 0 ? LucideIcons.trendingUp : LucideIcons.trendingDown,
+                      size: 14,
+                      color: weekNet >= 0
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(width: 4),
+                    MoneyText(
+                      weekNet,
+                      showSign: true,
+                      fontSize: 14,
+                      color: weekNet >= 0
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.error,
+                    ),
+                    Text(
+                      ' this week',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
+              ],
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        Text('Total balance', style: Theme.of(context).textTheme.bodyMedium),
-        _AnimatedBalance(value: balance, style: Theme.of(context).textTheme.displaySmall),
-        const SizedBox(height: 4),
-        Text(
-          '${formatMoney(weekNet, showSign: true)} this week',
-          style: TextStyle(
-            color: weekNet >= 0
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.error,
-          ),
-        ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -241,25 +284,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _AnimatedBalance extends StatelessWidget {
-  final int value;
-  final TextStyle? style;
-
-  const _AnimatedBalance({required this.value, required this.style});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: value.toDouble()),
-      duration: const Duration(milliseconds: 700),
-      curve: Curves.easeOutCubic,
-      builder: (context, animatedValue, child) {
-        return Text(formatMoney(animatedValue.round()), style: style);
-      },
-    );
-  }
-}
-
 class _StatCard extends StatelessWidget {
   final String label;
   final int amount;
@@ -277,12 +301,7 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(label, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 4),
-            Text(
-              formatMoney(amount),
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-            ),
+            MoneyText(amount, fontSize: 20),
           ],
         ),
       ),

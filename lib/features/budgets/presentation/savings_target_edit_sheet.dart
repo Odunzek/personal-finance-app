@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/models/money.dart';
 import '../../../core/widgets/animated_progress_bar.dart';
+import '../../../core/widgets/money_text.dart';
 
 const _stepMinorUnits = 2500;
 
@@ -87,10 +87,14 @@ class _SavingsTargetEditSheetState extends State<_SavingsTargetEditSheet> {
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 8),
-                Text(formatMoney(_target), style: Theme.of(context).textTheme.displaySmall),
+                MoneyText(_target, fontSize: 34),
                 const SizedBox(height: 8),
-                Text(
-                  '${formatMoney(widget.savedSoFarMinorUnits)} of your goal so far this month',
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MoneyText(widget.savedSoFarMinorUnits, fontSize: 14),
+                    const Text(' of your goal so far this month'),
+                  ],
                 ),
               ],
             ),
