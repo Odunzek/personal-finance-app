@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -5,9 +7,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/notifications/budget_alert_service.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
+import '../../budgets/data/budget_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
@@ -21,10 +25,11 @@ class TransactionDetailPane extends StatefulWidget {
   final Category? category;
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
+  final BudgetRepository budgetRepository;
   final VoidCallback onChanged;
   final VoidCallback onDelete;
 
-  const TransactionDetailPane({
+  TransactionDetailPane({
     super.key,
     required this.transaction,
     required this.category,
@@ -32,7 +37,8 @@ class TransactionDetailPane extends StatefulWidget {
     required this.categoryRepository,
     required this.onChanged,
     required this.onDelete,
-  });
+    BudgetRepository? budgetRepository,
+  }) : budgetRepository = budgetRepository ?? SupabaseBudgetRepository();
 
   @override
   State<TransactionDetailPane> createState() => _TransactionDetailPaneState();
@@ -122,6 +128,18 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
       _note = result.note;
     });
     widget.onChanged();
+    if (widget.transaction.type == model.TransactionKind.expense &&
+        _category != null) {
+      unawaited(
+        BudgetAlertService.checkThresholds(
+          budgetRepository: widget.budgetRepository,
+          transactionRepository: widget.transactionRepository,
+          profileId: widget.transaction.profileId,
+          categoryId: _category!.id,
+          categoryName: _category!.name,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmDelete() async {

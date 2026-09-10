@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -7,10 +9,12 @@ import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' show TransactionKind;
+import '../../../core/notifications/budget_alert_service.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../accounts/data/account_repository.dart';
+import '../../budgets/data/budget_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
@@ -20,6 +24,7 @@ class QuickAddScreen extends StatefulWidget {
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
   final AccountRepository accountRepository;
+  final BudgetRepository budgetRepository;
 
   QuickAddScreen({
     super.key,
@@ -27,10 +32,12 @@ class QuickAddScreen extends StatefulWidget {
     TransactionRepository? transactionRepository,
     CategoryRepository? categoryRepository,
     AccountRepository? accountRepository,
+    BudgetRepository? budgetRepository,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
        categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
-       accountRepository = accountRepository ?? SupabaseAccountRepository();
+       accountRepository = accountRepository ?? SupabaseAccountRepository(),
+       budgetRepository = budgetRepository ?? SupabaseBudgetRepository();
 
   @override
   State<QuickAddScreen> createState() => _QuickAddScreenState();
@@ -125,6 +132,20 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
           occurredAt: DateTime.now(),
           note: note,
         );
+        if (_kind == TransactionKind.expense) {
+          // Fire-and-forget: a missed or slow budget alert shouldn't hold up
+          // the save, and any failure here is not worth surfacing to the
+          // user mid-save.
+          unawaited(
+            BudgetAlertService.checkThresholds(
+              budgetRepository: widget.budgetRepository,
+              transactionRepository: widget.transactionRepository,
+              profileId: widget.profile.id,
+              categoryId: _selectedCategory!.id,
+              categoryName: _selectedCategory!.name,
+            ),
+          );
+        }
       }
       if (mounted) Navigator.of(context).pop(true);
     } finally {

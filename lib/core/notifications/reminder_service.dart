@@ -61,7 +61,8 @@ class ReminderService {
 
   Future<TimeOfDay> getTime() async {
     final hour = int.tryParse(await _storage.read(key: _hourKey) ?? '') ?? 20;
-    final minute = int.tryParse(await _storage.read(key: _minuteKey) ?? '') ?? 0;
+    final minute =
+        int.tryParse(await _storage.read(key: _minuteKey) ?? '') ?? 0;
     return TimeOfDay(hour: hour, minute: minute);
   }
 
@@ -82,6 +83,37 @@ class ReminderService {
   Future<void> cancel() async {
     await _storage.write(key: _enabledKey, value: 'false');
     await _plugin.cancel(id: _notificationId);
+  }
+
+  /// Fires a one-off notification right away (budget threshold alerts, not
+  /// the scheduled daily reminder above). Safe to call before [init] has
+  /// run elsewhere — it initializes itself if needed.
+  Future<void> notifyNow({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    await init();
+    if (Platform.isAndroid) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.requestNotificationsPermission();
+    }
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'budget_alerts',
+          'Budget alerts',
+          channelDescription:
+              'Warns when a category budget is nearly or fully spent',
+        ),
+      ),
+    );
   }
 
   Future<void> _schedule(TimeOfDay time) async {
