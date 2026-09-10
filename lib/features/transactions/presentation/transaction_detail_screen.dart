@@ -10,17 +10,17 @@ import '../../../core/widgets/money_text.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
+import 'transaction_edit_sheet.dart';
 
-/// The recategorize/delete/detail-row content for a single transaction,
-/// shared between the full-screen phone route ([TransactionDetailScreen])
-/// and the tablet two-pane layout in [ActivityScreen], so the logic only
-/// lives in one place.
+/// The recategorize/edit/delete content for a single transaction, shared
+/// between the full-screen phone route ([TransactionDetailScreen]) and the
+/// tablet two-pane layout in [ActivityScreen], so the logic only lives once.
 class TransactionDetailPane extends StatefulWidget {
   final model.Transaction transaction;
   final Category? category;
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
-  final ValueChanged<Category> onRecategorized;
+  final VoidCallback onChanged;
   final VoidCallback onDelete;
 
   const TransactionDetailPane({
@@ -29,7 +29,7 @@ class TransactionDetailPane extends StatefulWidget {
     required this.category,
     required this.transactionRepository,
     required this.categoryRepository,
-    required this.onRecategorized,
+    required this.onChanged,
     required this.onDelete,
   });
 
@@ -39,19 +39,27 @@ class TransactionDetailPane extends StatefulWidget {
 
 class _TransactionDetailPaneState extends State<TransactionDetailPane> {
   late Category? _category;
+  late int _amountMinorUnits;
+  late DateTime _occurredAt;
+  late String? _note;
 
   @override
   void initState() {
     super.initState();
-    _category = widget.category;
+    _resetFromWidget();
   }
 
   @override
   void didUpdateWidget(TransactionDetailPane oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.transaction.id != widget.transaction.id) {
-      _category = widget.category;
-    }
+    if (oldWidget.transaction.id != widget.transaction.id) _resetFromWidget();
+  }
+
+  void _resetFromWidget() {
+    _category = widget.category;
+    _amountMinorUnits = widget.transaction.amountMinorUnits;
+    _occurredAt = widget.transaction.occurredAt;
+    _note = widget.transaction.note;
   }
 
   Future<void> _recategorize() async {
@@ -90,7 +98,29 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
       categoryId: picked.id,
     );
     setState(() => _category = picked);
-    widget.onRecategorized(picked);
+    widget.onChanged();
+  }
+
+  Future<void> _edit() async {
+    final result = await showTransactionEditSheet(
+      context,
+      initialAmountMinorUnits: _amountMinorUnits,
+      initialOccurredAt: _occurredAt,
+      initialNote: _note ?? '',
+    );
+    if (result == null) return;
+    await widget.transactionRepository.updateTransaction(
+      widget.transaction.id,
+      amountMinorUnits: result.amountMinorUnits.abs(),
+      occurredAt: result.occurredAt,
+      note: result.note,
+    );
+    setState(() {
+      _amountMinorUnits = result.amountMinorUnits.abs();
+      _occurredAt = result.occurredAt;
+      _note = result.note;
+    });
+    widget.onChanged();
   }
 
   Future<void> _confirmDelete() async {
@@ -112,8 +142,31 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
       ),
     );
     if (confirmed != true) return;
-    await widget.transactionRepository.deleteTransaction(widget.transaction.id);
+
+    final t = widget.transaction;
+    await widget.transactionRepository.deleteTransaction(t.id);
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     widget.onDelete();
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('Transaction deleted'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            await widget.transactionRepository.createTransaction(
+              profileId: t.profileId,
+              categoryId: t.categoryId,
+              amountMinorUnits: t.amountMinorUnits,
+              type: t.type,
+              occurredAt: t.occurredAt,
+              note: t.note,
+            );
+            widget.onChanged();
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -127,6 +180,7 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            IconButton(onPressed: _edit, icon: const Icon(LucideIcons.pencil)),
             IconButton(onPressed: _confirmDelete, icon: const Icon(LucideIcons.trash2)),
           ],
         ),
@@ -145,13 +199,13 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
         const SizedBox(height: 12),
         Center(
           child: Text(
-            t.note?.isNotEmpty == true ? t.note! : (_category?.name ?? 'Uncategorized'),
+            _note?.isNotEmpty == true ? _note! : (_category?.name ?? 'Uncategorized'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         Center(
           child: MoneyText(
-            isIncome ? t.amountMinorUnits : -t.amountMinorUnits,
+            isIncome ? _amountMinorUnits : -_amountMinorUnits,
             fontSize: 34,
             color: isIncome ? Theme.of(context).colorScheme.primary : null,
           ),
@@ -162,7 +216,7 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
           child: Column(
             children: [
               _DetailRow('Category', _category?.name ?? 'Uncategorized'),
-              _DetailRow('Date', DateFormat.yMMMd().add_jm().format(t.occurredAt)),
+              _DetailRow('Date', DateFormat.yMMMd().add_jm().format(_occurredAt)),
             ],
           ),
         ),
@@ -213,7 +267,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           category: widget.category,
           transactionRepository: widget.transactionRepository,
           categoryRepository: widget.categoryRepository,
-          onRecategorized: (_) => setState(() => _changed = true),
+          onChanged: () => setState(() => _changed = true),
           onDelete: () => Navigator.of(context).pop(true),
         ),
       ),

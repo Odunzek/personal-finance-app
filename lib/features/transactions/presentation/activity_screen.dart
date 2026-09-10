@@ -35,6 +35,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   int? _filterCategoryId;
   late Future<_ActivityData> _dataFuture;
   int? _selectedTransactionId;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -133,7 +134,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               category: data.categoriesById[selected.categoryId],
                               transactionRepository: widget.transactionRepository,
                               categoryRepository: widget.categoryRepository,
-                              onRecategorized: (_) => _reload(),
+                              onChanged: _reload,
                               onDelete: () {
                                 setState(() => _selectedTransactionId = null);
                                 _reload();
@@ -150,7 +151,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
+  List<model.Transaction> _searchFiltered(_ActivityData data) {
+    if (_searchQuery.isEmpty) return data.transactions;
+    return data.transactions.where((t) {
+      final note = t.note?.toLowerCase() ?? '';
+      final categoryName = data.categoriesById[t.categoryId]?.name.toLowerCase() ?? '';
+      return note.contains(_searchQuery) || categoryName.contains(_searchQuery);
+    }).toList();
+  }
+
   Widget _buildList(BuildContext context, _ActivityData data, bool isTablet) {
+    final filtered = _searchFiltered(data);
     return CustomScrollView(
       slivers: [
         SliverPadding(
@@ -164,46 +175,62 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   children: [
                     Text('Activity', style: Theme.of(context).textTheme.headlineSmall),
                     Text(
-                      '${data.transactions.length} items',
+                      '${filtered.length} items',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 36,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      _FilterChip(
-                        label: 'All',
-                        selected: _filterCategoryId == null,
-                        onTap: () => setState(() {
-                          _filterCategoryId = null;
-                          _load();
-                        }),
-                      ),
-                      ...data.categoriesById.values.map(
-                        (c) => Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: _FilterChip(
-                            label: c.name,
-                            selected: _filterCategoryId == c.id,
-                            onTap: () => setState(() {
-                              _filterCategoryId = c.id;
-                              _load();
-                            }),
+                TextField(
+                  onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+                  decoration: InputDecoration(
+                    hintText: 'Search note or category',
+                    prefixIcon: const Icon(LucideIcons.search, size: 18),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ShaderMask(
+                  shaderCallback: (rect) => const LinearGradient(
+                    colors: [Colors.white, Colors.white, Colors.transparent],
+                    stops: [0, 0.92, 1],
+                  ).createShader(rect),
+                  child: SizedBox(
+                    height: 36,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        _FilterChip(
+                          label: 'All',
+                          selected: _filterCategoryId == null,
+                          onTap: () => setState(() {
+                            _filterCategoryId = null;
+                            _load();
+                          }),
+                        ),
+                        ...data.categoriesById.values.map(
+                          (c) => Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: _FilterChip(
+                              label: c.name,
+                              selected: _filterCategoryId == c.id,
+                              onTap: () => setState(() {
+                                _filterCategoryId = c.id;
+                                _load();
+                              }),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
-        if (data.transactions.isEmpty)
+        if (filtered.isEmpty)
           SliverFillRemaining(
             child: Center(
               child: Padding(
@@ -233,14 +260,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
             ),
           )
         else
-          ..._buildGroupedSlivers(context, data, isTablet),
+          ..._buildGroupedSlivers(context, data, filtered, isTablet),
       ],
     );
   }
 
-  List<Widget> _buildGroupedSlivers(BuildContext context, _ActivityData data, bool isTablet) {
+  List<Widget> _buildGroupedSlivers(
+    BuildContext context,
+    _ActivityData data,
+    List<model.Transaction> transactions,
+    bool isTablet,
+  ) {
     final groups = <String, List<model.Transaction>>{};
-    for (final t in data.transactions) {
+    for (final t in transactions) {
       final key = DateFormat.yMMMd().format(t.occurredAt);
       groups.putIfAbsent(key, () => []).add(t);
     }

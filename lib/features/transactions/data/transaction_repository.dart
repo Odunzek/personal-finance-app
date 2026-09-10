@@ -26,6 +26,7 @@ abstract class TransactionRepository {
     int id, {
     int? categoryId,
     int? amountMinorUnits,
+    DateTime? occurredAt,
     String? note,
   });
 
@@ -110,6 +111,7 @@ class SupabaseTransactionRepository implements TransactionRepository {
     int id, {
     int? categoryId,
     int? amountMinorUnits,
+    DateTime? occurredAt,
     String? note,
   }) async {
     final updates = <String, dynamic>{
@@ -118,6 +120,9 @@ class SupabaseTransactionRepository implements TransactionRepository {
     if (categoryId != null) updates['category_id'] = categoryId;
     if (amountMinorUnits != null) {
       updates['amount_minor_units'] = amountMinorUnits;
+    }
+    if (occurredAt != null) {
+      updates['occurred_at'] = occurredAt.toUtc().toIso8601String();
     }
     if (note != null) updates['note'] = note;
     await supabase.from('transactions').update(updates).eq('id', id);
