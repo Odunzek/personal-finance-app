@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -502,8 +503,8 @@ class _Keypad extends StatelessWidget {
     return GridView.count(
       crossAxisCount: 3,
       shrinkWrap: true,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
+      mainAxisSpacing: 2,
+      crossAxisSpacing: 2,
       childAspectRatio: 1.5,
       children: [
         for (final k in [
@@ -520,7 +521,13 @@ class _Keypad extends StatelessWidget {
           '0',
           '⌫',
         ])
-          _KeypadButton(label: k, onTap: () => onPressed(k)),
+          _KeypadButton(
+            label: k,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onPressed(k);
+            },
+          ),
       ],
     );
   }
@@ -534,16 +541,38 @@ class _KeypadButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Center(
-          child: label == '⌫'
-              ? const Icon(LucideIcons.delete)
-              : Text(label, style: Theme.of(context).textTheme.titleLarge),
+    final scheme = Theme.of(context).colorScheme;
+    final isBackspace = label == '⌫';
+    return Center(
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: FractionallySizedBox(
+          widthFactor: 0.68,
+          heightFactor: 0.68,
+          child: Material(
+            color: isBackspace
+                ? scheme.errorContainer.withValues(alpha: 0.35)
+                : Colors.transparent,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: Center(
+                child: isBackspace
+                    ? Icon(LucideIcons.delete, color: scheme.error, size: 22)
+                    : Text(
+                        label,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: label == '.'
+                                  ? scheme.onSurfaceVariant
+                                  : scheme.onSurface,
+                            ),
+                      ),
+              ),
+            ),
+          ),
         ),
       ),
     );
