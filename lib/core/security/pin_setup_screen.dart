@@ -75,8 +75,11 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     }
   }
 
+  // TextEditingController.clear() fires onChanged('') too, same as user
+  // input — guarding on isNotEmpty stops the programmatic clear right after
+  // setting _error = true from immediately undoing it before it ever renders.
   void _onChanged(String value) {
-    if (_error) setState(() => _error = false);
+    if (_error && value.isNotEmpty) setState(() => _error = false);
     if (value.length == 4) _submit();
   }
 

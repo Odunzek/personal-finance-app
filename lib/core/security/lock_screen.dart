@@ -48,6 +48,7 @@ class _LockScreenState extends State<LockScreen> {
   }
 
   Future<void> _submit() async {
+    if (_checking) return;
     setState(() => _checking = true);
     final ok = await PinVault.verifyPin(_controller.text);
     if (!mounted) return;
@@ -62,8 +63,12 @@ class _LockScreenState extends State<LockScreen> {
     });
   }
 
+  // TextEditingController.clear() fires onChanged('') too, same as user
+  // input — guarding on isNotEmpty stops that programmatic clear (right
+  // after setting _error = true above) from immediately undoing it before
+  // the message ever renders.
   void _onChanged(String value) {
-    if (_error) setState(() => _error = false);
+    if (_error && value.isNotEmpty) setState(() => _error = false);
     if (value.length == 4) _submit();
   }
 
@@ -92,7 +97,6 @@ class _LockScreenState extends State<LockScreen> {
                   controller: _controller,
                   focusNode: _focusNode,
                   autofocus: true,
-                  enabled: !_checking,
                   obscureText: true,
                   obscuringCharacter: '●',
                   keyboardType: TextInputType.number,
