@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/export/statement_pdf.dart';
 import '../../../core/export/transactions_csv.dart';
 import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
@@ -26,6 +28,7 @@ import '../../profiles/presentation/profile_list_screen.dart';
 import '../../recurring/data/recurring_rule_repository.dart';
 import '../../recurring/presentation/recurring_rule_list_screen.dart';
 import '../../transactions/data/transaction_repository.dart';
+import 'statement_options_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Profile profile;
@@ -65,6 +68,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _resetting = false;
   bool _exporting = false;
+  bool _printing = false;
   bool _hasPin = false;
   bool _reminderEnabled = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
@@ -173,6 +177,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } finally {
       if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Future<void> _printStatement() async {
+    final accounts = await widget.accountRepository.listActiveAccounts(
+      widget.profile.id,
+    );
+    if (!mounted) return;
+    final options = await showStatementOptionsSheet(
+      context,
+      accounts: accounts,
+    );
+    if (options == null) return;
+
+    setState(() => _printing = true);
+    try {
+      final results = await Future.wait([
+        widget.transactionRepository.listTransactions(
+          widget.profile.id,
+          from: options.from,
+          to: options.to,
+        ),
+        widget.categoryRepository.listActiveCategories(widget.profile.id),
+      ]);
+      final allInRange = results[0] as List<model.Transaction>;
+      final categories = results[1] as List<Category>;
+      // Filtering by accountId alone only matches the "from" side of a
+      // transfer, so a statement for e.g. Visa would miss money transferred
+      // into it from Cash. Match either side, same as computeAccountBalance.
+      final accountId = options.account?.id;
+      final transactions = accountId == null
+          ? allInRange
+          : allInRange
+                .where(
+                  (t) =>
+                      t.accountId == accountId ||
+                      t.transferAccountId == accountId,
+                )
+                .toList();
+
+      final doc = await buildStatementPdf(
+        profile: widget.profile,
+        account: options.account,
+        from: options.from,
+        to: options.to,
+        transactions: transactions,
+        categoriesById: {for (final c in categories) c.id: c},
+        accountsById: {for (final a in accounts) a.id: a},
+      );
+
+      if (!mounted) return;
+      await Printing.layoutPdf(onLayout: (_) => doc.save());
+    } finally {
+      if (mounted) setState(() => _printing = false);
     }
   }
 
@@ -386,6 +444,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             )
             .animate()
             .fadeIn(delay: 60.ms, duration: 300.ms)
+            .slideY(begin: 0.05, end: 0),
+        const SizedBox(height: 16),
+        Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: _printing
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(LucideIcons.printer),
+                title: const Text('Print statement'),
+                subtitle: const Text(
+                  'Generate a printable PDF for an account and date range',
+                ),
+                onTap: _printing ? null : _printStatement,
+              ),
+            )
+            .animate()
+            .fadeIn(delay: 70.ms, duration: 300.ms)
             .slideY(begin: 0.05, end: 0),
         const SizedBox(height: 16),
         Card(

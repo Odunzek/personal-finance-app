@@ -49,6 +49,8 @@ dependencies:
   timezone: ^0.11.1
   share_plus: ^13.3.0
   path_provider: ^2.1.6
+  pdf: ^3.11.3
+  printing: ^5.14.2
 
 dev_dependencies:
   flutter_test:
