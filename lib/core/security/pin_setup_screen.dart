@@ -34,7 +34,13 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     final entered = _controller.text;
     switch (_step) {
       case _Step.confirmCurrent:
-        final ok = await PinVault.verifyPin(entered);
+        bool ok;
+        try {
+          ok = await PinVault.verifyPin(entered)
+              .timeout(const Duration(seconds: 5));
+        } catch (_) {
+          ok = false;
+        }
         if (!mounted) return;
         if (!ok) {
           setState(() {
@@ -138,7 +144,11 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                     counterText: '',
                     errorText: _error ? 'That didn\'t match. Try again.' : null,
                   ),
+                  textInputAction: TextInputAction.done,
                   onChanged: _onChanged,
+                  onSubmitted: (_) {
+                    if (_controller.text.length == 4) _submit();
+                  },
                 ),
               ],
             ),

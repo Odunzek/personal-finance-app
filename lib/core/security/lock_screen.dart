@@ -23,6 +23,7 @@ class _LockScreenState extends State<LockScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   bool _error = false;
+  bool _storageError = false;
   bool _checking = false;
   int _failedAttempts = 0;
   DateTime? _cooldownUntil;
@@ -99,17 +100,34 @@ class _LockScreenState extends State<LockScreen> {
 
   Future<void> _submit() async {
     if (_checking || _coolingDown) return;
+    if (_controller.text.length < 4) return;
     setState(() => _checking = true);
-    final ok = await PinVault.verifyPin(_controller.text);
+    // Secure storage can throw on some devices (keystore hiccups after an
+    // app update or biometric change). Without the catch, one exception
+    // left _checking stuck true and every later attempt was silently
+    // ignored — a dead lock screen with no error.
+    bool ok;
+    var storageFailed = false;
+    try {
+      ok = await PinVault.verifyPin(_controller.text)
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      ok = false;
+      storageFailed = true;
+    }
     if (!mounted) return;
     if (ok) {
       AppLockController.instance.unlock();
       return;
     }
     setState(() {
+      _checking = false;
+      if (storageFailed) {
+        _storageError = true;
+        return;
+      }
       _error = true;
       _controller.clear();
-      _checking = false;
       _failedAttempts++;
       if (_failedAttempts >= _maxAttemptsBeforeCooldown) {
         _startCooldown();
@@ -122,7 +140,12 @@ class _LockScreenState extends State<LockScreen> {
   // after setting _error = true above) from immediately undoing it before
   // the message ever renders.
   void _onChanged(String value) {
-    if (_error && value.isNotEmpty) setState(() => _error = false);
+    if ((_error || _storageError) && value.isNotEmpty) {
+      setState(() {
+        _error = false;
+        _storageError = false;
+      });
+    }
     if (value.length == 4) _submit();
   }
 
@@ -160,16 +183,21 @@ class _LockScreenState extends State<LockScreen> {
                     LengthLimitingTextInputFormatter(4),
                   ],
                   textAlign: TextAlign.center,
+                  textInputAction: TextInputAction.done,
                   style: Theme.of(context).textTheme.headlineMedium
                       ?.copyWith(letterSpacing: 20),
                   decoration: InputDecoration(
                     counterText: '',
+                    helperText: _checking ? 'Checking…' : null,
                     errorText: coolingDown
                         ? 'Too many attempts — wait '
                               '$_cooldownSecondsLeft s.'
+                        : _storageError
+                        ? 'Couldn\'t read the saved PIN — try again.'
                         : (_error ? 'That didn\'t match.' : null),
                   ),
                   onChanged: _onChanged,
+                  onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 20),
                 TextButton.icon(
