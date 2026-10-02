@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
+
 import '../../features/recurring/data/recurring_rule_repository.dart';
 import '../../features/transactions/data/transaction_repository.dart';
 
@@ -28,34 +30,45 @@ class RecurringRuleRunner {
       var due = rule.nextDueDate;
       var iterations = 0;
       while (!due.isAfter(todayDateOnly) && iterations < _maxCatchUpPerRule) {
-        if (rule.isTransfer) {
-          await transactionRepository.createTransfer(
-            profileId: rule.profileId,
-            fromAccountId: rule.accountId,
-            toAccountId: rule.toAccountId!,
-            amountMinorUnits: rule.amountMinorUnits,
-            occurredAt: due,
-            note: rule.note,
-            recurringRuleId: rule.id,
-          );
-        } else {
-          await transactionRepository.createTransaction(
-            profileId: rule.profileId,
-            accountId: rule.accountId,
-            categoryId: rule.categoryId!,
-            amountMinorUnits: rule.amountMinorUnits,
-            type: rule.type,
-            occurredAt: due,
-            note: rule.note,
-            recurringRuleId: rule.id,
-          );
+        try {
+          if (rule.isTransfer) {
+            await transactionRepository.createTransfer(
+              profileId: rule.profileId,
+              fromAccountId: rule.accountId,
+              toAccountId: rule.toAccountId!,
+              amountMinorUnits: rule.amountMinorUnits,
+              occurredAt: due,
+              note: rule.note,
+              recurringRuleId: rule.id,
+            );
+            createdAny = true;
+          } else {
+            await transactionRepository.createTransaction(
+              profileId: rule.profileId,
+              accountId: rule.accountId,
+              categoryId: rule.categoryId!,
+              amountMinorUnits: rule.amountMinorUnits,
+              type: rule.type,
+              occurredAt: due,
+              note: rule.note,
+              recurringRuleId: rule.id,
+            );
+            createdAny = true;
+          }
+        } on PostgrestException catch (e) {
+          // 23505 = the unique (recurring_rule_id, occurred_at) index: a
+          // second device already created this occurrence. Still advance
+          // past it; anything else is a real failure.
+          if (e.code != '23505') rethrow;
         }
-        createdAny = true;
         due = rule.frequency.next(due);
-        iterations++;
-      }
-      if (iterations > 0) {
+        // Advance after every insert, not once after the loop — a crash or
+        // dropped connection mid-catch-up must not replay occurrences that
+        // were already created on the next launch. The unique index on
+        // (recurring_rule_id, occurred_at) backstops the remaining race of
+        // two devices catching up the same rule at the same moment.
         await recurringRuleRepository.advanceRule(rule.id, due);
+        iterations++;
       }
     }
     return createdAny;
