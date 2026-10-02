@@ -40,6 +40,32 @@ class Transaction {
   bool get isTransfer => type == TransactionKind.transfer;
   bool get isRecurring => recurringRuleId != null;
 
+  /// [categoryId] and [transferAccountId] are passed explicitly rather than
+  /// defaulted, because converting between a transfer and an income/expense
+  /// has to be able to set either one back to null.
+  Transaction copyWith({
+    int? accountId,
+    required int? categoryId,
+    required int? transferAccountId,
+    int? amountMinorUnits,
+    TransactionKind? type,
+    DateTime? occurredAt,
+    String? note,
+  }) {
+    return Transaction(
+      id: id,
+      profileId: profileId,
+      accountId: accountId ?? this.accountId,
+      categoryId: categoryId,
+      transferAccountId: transferAccountId,
+      amountMinorUnits: amountMinorUnits ?? this.amountMinorUnits,
+      type: type ?? this.type,
+      occurredAt: occurredAt ?? this.occurredAt,
+      note: note ?? this.note,
+      recurringRuleId: recurringRuleId,
+    );
+  }
+
   factory Transaction.fromRow(Map<String, dynamic> row) {
     return Transaction(
       id: row['id'] as int,

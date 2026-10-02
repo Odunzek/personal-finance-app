@@ -12,6 +12,7 @@ import '../../../core/models/transaction.dart' as model;
 import '../../../core/widgets/async_error_view.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
+import '../../categories/presentation/category_picker_sheet.dart';
 import '../data/transaction_repository.dart';
 import 'transaction_detail_screen.dart';
 import 'transaction_tile.dart';
@@ -49,6 +50,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
   int? _selectedTransactionId;
   String _searchQuery = '';
 
+  /// Non-null while the list is in multi-select mode for bulk recategorizing.
+  /// Transfers are never in here — they have no category to change.
+  Set<int>? _bulkSelection;
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +83,60 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Future<void> _reload() async {
     setState(_load);
     await _dataFuture;
+  }
+
+  void _startBulk(model.Transaction t) {
+    if (t.isTransfer) {
+      showActionHint(context, 'Transfers have no category to change.');
+      return;
+    }
+    setState(() => _bulkSelection = {t.id});
+  }
+
+  void _toggleBulk(model.Transaction t) {
+    if (t.isTransfer) {
+      showActionHint(context, 'Transfers have no category to change.');
+      return;
+    }
+    setState(() {
+      final selection = _bulkSelection!;
+      if (!selection.remove(t.id)) selection.add(t.id);
+      if (selection.isEmpty) _bulkSelection = null;
+    });
+  }
+
+  Future<void> _bulkRecategorize(_ActivityData data) async {
+    final ids = _bulkSelection!.toList();
+    final categories = data.categoriesById.values.toList();
+    final picked = await showCategoryPickerSheet(
+      context,
+      categories: categories,
+      title: 'Move ${ids.length} transaction${ids.length == 1 ? '' : 's'} to',
+    );
+    if (picked == null) return;
+    try {
+      await widget.transactionRepository.recategorizeTransactions(
+        ids: ids,
+        categoryId: picked.id,
+        type: picked.type == CategoryType.income
+            ? model.TransactionKind.income
+            : model.TransactionKind.expense,
+      );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Moving the transactions');
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _bulkSelection = null);
+    await _reload();
+    widget.onDataChanged?.call();
+    if (mounted) {
+      showActionHint(
+        context,
+        'Moved ${ids.length} transaction${ids.length == 1 ? '' : 's'} '
+        'to ${picked.name}.',
+      );
+    }
   }
 
   Future<void> _openDetail(
@@ -212,19 +271,42 @@ class _ActivityScreenState extends State<ActivityScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Activity',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    Text(
-                      '${filtered.length} items',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
+                if (_bulkSelection != null)
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => setState(() => _bulkSelection = null),
+                        icon: const Icon(LucideIcons.x),
+                        tooltip: 'Cancel',
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${_bulkSelection!.length} selected',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () => _bulkRecategorize(data),
+                        icon: const Icon(LucideIcons.folderSymlink, size: 16),
+                        label: const Text('Recategorize'),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Activity',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      Text(
+                        '${filtered.length} items',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 12),
                 TextField(
                   onChanged: (v) =>
@@ -374,7 +456,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         category: category,
                         accountsById: data.accountsById,
                         showDate: false,
-                        onTap: () => _openDetail(t, category, isTablet),
+                        selected: _bulkSelection?.contains(t.id),
+                        onTap: () => _bulkSelection == null
+                            ? _openDetail(t, category, isTablet)
+                            : _toggleBulk(t),
+                        onLongPress: _bulkSelection == null
+                            ? () => _startBulk(t)
+                            : null,
                       ),
                     )
                     .animate()

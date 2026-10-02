@@ -64,3 +64,15 @@ void showActionError(BuildContext context, String what) {
     ),
   );
 }
+
+/// Confirms an action that succeeded, or explains why one isn't available —
+/// the neutral counterpart to [showActionError].
+void showActionHint(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 2),
+      content: Text(message),
+    ),
+  );
+}

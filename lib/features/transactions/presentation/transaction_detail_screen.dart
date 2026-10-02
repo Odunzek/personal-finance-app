@@ -5,14 +5,18 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/notifications/budget_alert_service.dart';
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
+import '../../accounts/data/account_repository.dart';
 import '../../budgets/data/budget_repository.dart';
 import '../../categories/data/category_repository.dart';
+import '../../categories/presentation/category_picker_sheet.dart';
 import '../../categories/presentation/category_style_options.dart';
 import '../data/transaction_repository.dart';
 import 'transaction_edit_sheet.dart';
@@ -25,6 +29,7 @@ class TransactionDetailPane extends StatefulWidget {
   final Category? category;
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
+  final AccountRepository accountRepository;
   final BudgetRepository budgetRepository;
   final VoidCallback onChanged;
   final VoidCallback onDelete;
@@ -37,8 +42,10 @@ class TransactionDetailPane extends StatefulWidget {
     required this.categoryRepository,
     required this.onChanged,
     required this.onDelete,
+    AccountRepository? accountRepository,
     BudgetRepository? budgetRepository,
-  }) : budgetRepository = budgetRepository ?? SupabaseBudgetRepository();
+  }) : accountRepository = accountRepository ?? SupabaseAccountRepository(),
+       budgetRepository = budgetRepository ?? SupabaseBudgetRepository();
 
   @override
   State<TransactionDetailPane> createState() => _TransactionDetailPaneState();
@@ -46,9 +53,10 @@ class TransactionDetailPane extends StatefulWidget {
 
 class _TransactionDetailPaneState extends State<TransactionDetailPane> {
   late Category? _category;
-  late int _amountMinorUnits;
-  late DateTime _occurredAt;
-  late String? _note;
+
+  /// A local copy, because an edit here can change the transaction's kind and
+  /// accounts — not just its amount — and the widget's own copy is immutable.
+  late model.Transaction _t;
 
   @override
   void initState() {
@@ -64,82 +72,109 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
 
   void _resetFromWidget() {
     _category = widget.category;
-    _amountMinorUnits = widget.transaction.amountMinorUnits;
-    _occurredAt = widget.transaction.occurredAt;
-    _note = widget.transaction.note;
+    _t = widget.transaction;
   }
 
   Future<void> _recategorize() async {
     final categories = await widget.categoryRepository.listActiveCategories(
-      widget.transaction.profileId,
+      _t.profileId,
     );
     if (!mounted) return;
-    final picked = await showModalBottomSheet<Category>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: categories
-              .map(
-                (c) => ListTile(
-                  leading: CategoryBadge(
-                    icon: iconForKey(c.iconKey),
-                    color: Color(c.colorArgb),
-                    size: 32,
-                    iconSize: 18,
-                  ),
-                  title: Text(c.name),
-                  trailing: c.id == _category?.id
-                      ? const Icon(LucideIcons.check)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(c),
-                ),
-              )
-              .toList(),
-        ),
-      ),
+    final picked = await showCategoryPickerSheet(
+      context,
+      categories: categories,
+      selectedId: _category?.id,
     );
     if (picked == null || picked.id == _category?.id) return;
-    await widget.transactionRepository.updateTransaction(
-      widget.transaction.id,
-      categoryId: picked.id,
-    );
-    setState(() => _category = picked);
+    // The type follows the category, so moving an expense into an income
+    // category doesn't leave the row counted on the wrong side of every total.
+    final type = picked.type == CategoryType.income
+        ? model.TransactionKind.income
+        : model.TransactionKind.expense;
+    try {
+      await widget.transactionRepository.updateTransaction(
+        _t.id,
+        categoryId: picked.id,
+        type: type,
+      );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Moving the transaction');
+      return;
+    }
+    setState(() {
+      _category = picked;
+      _t = _t.copyWith(
+        categoryId: picked.id,
+        transferAccountId: null,
+        type: type,
+      );
+    });
     widget.onChanged();
+    _checkBudget();
   }
 
   Future<void> _edit() async {
+    final results = await Future.wait([
+      widget.categoryRepository.listActiveCategories(_t.profileId),
+      widget.accountRepository.listActiveAccounts(_t.profileId),
+    ]);
+    if (!mounted) return;
+    final categories = results[0] as List<Category>;
+    final accounts = results[1] as List<Account>;
     final result = await showTransactionEditSheet(
       context,
-      initialAmountMinorUnits: _amountMinorUnits,
-      initialOccurredAt: _occurredAt,
-      initialNote: _note ?? '',
+      transaction: _t,
+      categories: categories,
+      accounts: accounts,
     );
     if (result == null) return;
-    await widget.transactionRepository.updateTransaction(
-      widget.transaction.id,
-      amountMinorUnits: result.amountMinorUnits.abs(),
-      occurredAt: result.occurredAt,
-      note: result.note,
-    );
+    try {
+      await widget.transactionRepository.updateTransaction(
+        _t.id,
+        amountMinorUnits: result.amountMinorUnits,
+        occurredAt: result.occurredAt,
+        note: result.note,
+        accountId: result.accountId,
+        type: result.type,
+        categoryId: result.categoryId,
+        transferAccountId: result.transferAccountId,
+      );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Saving the changes');
+      return;
+    }
     setState(() {
-      _amountMinorUnits = result.amountMinorUnits.abs();
-      _occurredAt = result.occurredAt;
-      _note = result.note;
+      _t = _t.copyWith(
+        amountMinorUnits: result.amountMinorUnits,
+        occurredAt: result.occurredAt,
+        note: result.note,
+        accountId: result.accountId,
+        type: result.type,
+        categoryId: result.categoryId,
+        transferAccountId: result.transferAccountId,
+      );
+      _category = result.categoryId == null
+          ? null
+          : categories.firstWhere(
+              (c) => c.id == result.categoryId,
+              orElse: () => categories.first,
+            );
     });
     widget.onChanged();
-    if (widget.transaction.type == model.TransactionKind.expense &&
-        _category != null) {
-      unawaited(
-        BudgetAlertService.checkThresholds(
-          budgetRepository: widget.budgetRepository,
-          transactionRepository: widget.transactionRepository,
-          profileId: widget.transaction.profileId,
-          categoryId: _category!.id,
-          categoryName: _category!.name,
-        ),
-      );
-    }
+    _checkBudget();
+  }
+
+  void _checkBudget() {
+    if (_t.type != model.TransactionKind.expense || _category == null) return;
+    unawaited(
+      BudgetAlertService.checkThresholds(
+        budgetRepository: widget.budgetRepository,
+        transactionRepository: widget.transactionRepository,
+        profileId: _t.profileId,
+        categoryId: _category!.id,
+        categoryName: _category!.name,
+      ),
+    );
   }
 
   Future<void> _confirmDelete() async {
@@ -162,7 +197,9 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
     );
     if (confirmed != true) return;
 
-    final t = widget.transaction;
+    // _t, not the widget's copy: an edit in this session may have changed the
+    // kind or accounts, and Undo has to restore what was actually deleted.
+    final t = _t;
     await widget.transactionRepository.deleteTransaction(t.id);
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -202,9 +239,8 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
 
   @override
   Widget build(BuildContext context) {
-    final t = widget.transaction;
-    final isIncome = t.type == model.TransactionKind.income;
-    final isTransfer = t.isTransfer;
+    final isIncome = _t.type == model.TransactionKind.income;
+    final isTransfer = _t.isTransfer;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -239,8 +275,8 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
         const SizedBox(height: 12),
         Center(
           child: Text(
-            _note?.isNotEmpty == true
-                ? _note!
+            _t.note?.isNotEmpty == true
+                ? _t.note!
                 : (isTransfer
                       ? 'Transfer'
                       : (_category?.name ?? 'Uncategorized')),
@@ -250,8 +286,8 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
         Center(
           child: MoneyText(
             isTransfer
-                ? _amountMinorUnits
-                : (isIncome ? _amountMinorUnits : -_amountMinorUnits),
+                ? _t.amountMinorUnits
+                : (isIncome ? _t.amountMinorUnits : -_t.amountMinorUnits),
             fontSize: 34,
             color: !isTransfer && isIncome
                 ? Theme.of(context).colorScheme.primary
@@ -267,7 +303,7 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
                 _DetailRow('Category', _category?.name ?? 'Uncategorized'),
               _DetailRow(
                 'Date',
-                DateFormat.yMMMd().add_jm().format(_occurredAt),
+                DateFormat.yMMMd().add_jm().format(_t.occurredAt),
               ),
             ],
           ),
@@ -289,6 +325,7 @@ class TransactionDetailScreen extends StatefulWidget {
   final Category? category;
   final TransactionRepository transactionRepository;
   final CategoryRepository categoryRepository;
+  final AccountRepository accountRepository;
 
   TransactionDetailScreen({
     super.key,
@@ -296,9 +333,11 @@ class TransactionDetailScreen extends StatefulWidget {
     required this.category,
     TransactionRepository? transactionRepository,
     CategoryRepository? categoryRepository,
+    AccountRepository? accountRepository,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
-       categoryRepository = categoryRepository ?? SupabaseCategoryRepository();
+       categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
+       accountRepository = accountRepository ?? SupabaseAccountRepository();
 
   @override
   State<TransactionDetailScreen> createState() =>
@@ -327,6 +366,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             category: widget.category,
             transactionRepository: widget.transactionRepository,
             categoryRepository: widget.categoryRepository,
+            accountRepository: widget.accountRepository,
             onChanged: () => setState(() => _changed = true),
             onDelete: () => Navigator.of(context).pop(true),
           ),

@@ -127,6 +127,16 @@ class _RecordingTransactionRepository implements TransactionRepository {
     int? amountMinorUnits,
     DateTime? occurredAt,
     String? note,
+    int? accountId,
+    TransactionKind? type,
+    int? transferAccountId,
+  }) async {}
+
+  @override
+  Future<void> recategorizeTransactions({
+    required List<int> ids,
+    required int categoryId,
+    required TransactionKind type,
   }) async {}
 
   @override

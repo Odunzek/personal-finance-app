@@ -37,12 +37,33 @@ abstract class TransactionRepository {
     int? recurringRuleId,
   });
 
+  /// Updates any subset of a transaction's fields. Passing [type] rewrites the
+  /// row's whole shape — category and transfer columns together — because the
+  /// database requires an income/expense row to have a category and no
+  /// transfer destination, and a transfer the exact reverse; changing one
+  /// column without the other is rejected. So [categoryId] is required
+  /// alongside an income/expense [type], and [transferAccountId] alongside a
+  /// transfer [type].
   Future<void> updateTransaction(
     int id, {
     int? categoryId,
     int? amountMinorUnits,
     DateTime? occurredAt,
     String? note,
+    int? accountId,
+    TransactionKind? type,
+    int? transferAccountId,
+  });
+
+  /// Moves every transaction in [ids] to [categoryId] in one round-trip, and
+  /// sets each one's [type] to match that category's own type — otherwise an
+  /// expense dropped into an income category would contradict its category
+  /// and be counted on the wrong side of every total. Transfers have no
+  /// category, so they must not be included in [ids].
+  Future<void> recategorizeTransactions({
+    required List<int> ids,
+    required int categoryId,
+    required TransactionKind type,
   });
 
   Future<void> deleteTransaction(int id);
@@ -164,11 +185,32 @@ class SupabaseTransactionRepository implements TransactionRepository {
     int? amountMinorUnits,
     DateTime? occurredAt,
     String? note,
+    int? accountId,
+    TransactionKind? type,
+    int? transferAccountId,
   }) async {
     final updates = <String, dynamic>{
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
-    if (categoryId != null) updates['category_id'] = categoryId;
+    if (type != null) {
+      updates['type'] = type.toDb();
+      if (type == TransactionKind.transfer) {
+        if (transferAccountId == null) {
+          throw ArgumentError('A transfer needs a destination account.');
+        }
+        updates['transfer_account_id'] = transferAccountId;
+        updates['category_id'] = null;
+      } else {
+        if (categoryId == null) {
+          throw ArgumentError('An ${type.name} needs a category.');
+        }
+        updates['category_id'] = categoryId;
+        updates['transfer_account_id'] = null;
+      }
+    } else if (categoryId != null) {
+      updates['category_id'] = categoryId;
+    }
+    if (accountId != null) updates['account_id'] = accountId;
     if (amountMinorUnits != null) {
       updates['amount_minor_units'] = amountMinorUnits;
     }
@@ -182,6 +224,24 @@ class SupabaseTransactionRepository implements TransactionRepository {
       updates['note'] = note.trim().isEmpty ? null : note.trim();
     }
     await supabase.from('transactions').update(updates).eq('id', id);
+  }
+
+  @override
+  Future<void> recategorizeTransactions({
+    required List<int> ids,
+    required int categoryId,
+    required TransactionKind type,
+  }) async {
+    if (ids.isEmpty) return;
+    await supabase
+        .from('transactions')
+        .update({
+          'category_id': categoryId,
+          'type': type.toDb(),
+          'transfer_account_id': null,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .inFilter('id', ids);
   }
 
   @override
