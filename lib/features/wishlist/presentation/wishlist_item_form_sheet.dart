@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/models/category.dart';
+import '../../../core/models/money.dart';
 
 class WishlistItemFormResult {
   final String name;
@@ -51,11 +52,10 @@ class _WishlistItemFormSheetState extends State<_WishlistItemFormSheet> {
   void _submit() {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
-    final price = double.tryParse(_priceController.text.trim());
     Navigator.of(context).pop(
       WishlistItemFormResult(
         name: name,
-        estimatedPriceMinorUnits: price == null ? null : (price * 100).round(),
+        estimatedPriceMinorUnits: parseMoneyMinorUnits(_priceController.text),
         categoryId: _category?.id,
       ),
     );

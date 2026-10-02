@@ -8,6 +8,7 @@ import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/recurring_rule.dart';
 import '../../../core/models/transaction.dart';
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../accounts/data/account_repository.dart';
@@ -133,6 +134,9 @@ class _RecurringRuleListScreenState extends State<RecurringRuleListScreen> {
         child: FutureBuilder<_RecurringRulesData>(
           future: _dataFuture,
           builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return AsyncErrorView(onRetry: _reload);
+            }
             final data = snapshot.data;
             if (data == null) {
               return const Center(child: CircularProgressIndicator());

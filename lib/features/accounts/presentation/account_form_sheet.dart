@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/models/account.dart';
+import '../../../core/models/money.dart';
 
 class AccountFormResult {
   final String name;
@@ -50,8 +51,7 @@ class _AccountFormSheetState extends State<_AccountFormSheet> {
   void _submit() {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
-    final dollars = double.tryParse(_balanceController.text.trim()) ?? 0;
-    final magnitude = (dollars.abs() * 100).round();
+    final magnitude = parseMoneyMinorUnits(_balanceController.text) ?? 0;
     final isLiability = _type == AccountType.liability;
     Navigator.of(context).pop(
       AccountFormResult(

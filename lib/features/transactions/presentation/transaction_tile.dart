@@ -16,6 +16,10 @@ class TransactionTile extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showDate;
 
+  /// Off inside screens already scoped to one category (category insights),
+  /// where repeating the category name in every subtitle is pure noise.
+  final bool showCategoryName;
+
   const TransactionTile({
     super.key,
     required this.transaction,
@@ -23,6 +27,7 @@ class TransactionTile extends StatelessWidget {
     this.accountsById,
     this.onTap,
     this.showDate = true,
+    this.showCategoryName = true,
   });
 
   @override
@@ -95,7 +100,7 @@ class TransactionTile extends StatelessWidget {
       ),
       subtitle: Text(
         [
-          category?.name ?? 'Uncategorized',
+          if (showCategoryName) category?.name ?? 'Uncategorized',
           if (showDate) DateFormat.MMMd().format(transaction.occurredAt),
         ].join(' · '),
         maxLines: 1,

@@ -9,6 +9,7 @@ import '../../../core/models/category.dart';
 import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/async_error_view.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../data/transaction_repository.dart';
@@ -21,9 +22,15 @@ class ActivityScreen extends StatefulWidget {
   final CategoryRepository categoryRepository;
   final AccountRepository accountRepository;
 
+  /// Called after an edit/delete here changes data other tabs render
+  /// (Home's recent list, Budgets' progress, Trends), so the shell can
+  /// refresh them instead of leaving stale copies in the IndexedStack.
+  final VoidCallback? onDataChanged;
+
   ActivityScreen({
     super.key,
     required this.profile,
+    this.onDataChanged,
     TransactionRepository? transactionRepository,
     CategoryRepository? categoryRepository,
     AccountRepository? accountRepository,
@@ -63,12 +70,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
     ]);
     return _ActivityData(
       results[0] as List<model.Transaction>,
-      {
-        for (final c in results[1] as List<Category>) c.id: c,
-      },
-      {
-        for (final a in results[2] as List<Account>) a.id: a,
-      },
+      {for (final c in results[1] as List<Category>) c.id: c},
+      {for (final a in results[2] as List<Account>) a.id: a},
     );
   }
 
@@ -77,17 +80,25 @@ class _ActivityScreenState extends State<ActivityScreen> {
     await _dataFuture;
   }
 
-  Future<void> _openDetail(model.Transaction t, Category? category, bool isTablet) async {
+  Future<void> _openDetail(
+    model.Transaction t,
+    Category? category,
+    bool isTablet,
+  ) async {
     if (isTablet) {
       setState(() => _selectedTransactionId = t.id);
       return;
     }
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => TransactionDetailScreen(transaction: t, category: category),
+        builder: (_) =>
+            TransactionDetailScreen(transaction: t, category: category),
       ),
     );
-    if (changed == true) _reload();
+    if (changed == true) {
+      await _reload();
+      widget.onDataChanged?.call();
+    }
   }
 
   @override
@@ -97,6 +108,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
       child: FutureBuilder<_ActivityData>(
         future: _dataFuture,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return AsyncErrorView(onRetry: () => setState(_load));
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -121,7 +135,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         border: Border(
-                          right: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                          right: BorderSide(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
                         ),
                       ),
                       child: list,
@@ -140,13 +156,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             child: TransactionDetailPane(
                               key: ValueKey(selected.id),
                               transaction: selected,
-                              category: data.categoriesById[selected.categoryId],
-                              transactionRepository: widget.transactionRepository,
+                              category:
+                                  data.categoriesById[selected.categoryId],
+                              transactionRepository:
+                                  widget.transactionRepository,
                               categoryRepository: widget.categoryRepository,
-                              onChanged: _reload,
+                              onChanged: () {
+                                _reload();
+                                widget.onDataChanged?.call();
+                              },
                               onDelete: () {
                                 setState(() => _selectedTransactionId = null);
                                 _reload();
+                                widget.onDataChanged?.call();
                               },
                             ),
                           ),
@@ -164,8 +186,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
     if (_searchQuery.isEmpty) return data.transactions;
     return data.transactions.where((t) {
       final note = t.note?.toLowerCase() ?? '';
-      final categoryName = data.categoriesById[t.categoryId]?.name.toLowerCase() ?? '';
-      return note.contains(_searchQuery) || categoryName.contains(_searchQuery);
+      final categoryName =
+          data.categoriesById[t.categoryId]?.name.toLowerCase() ?? '';
+      final accountName =
+          data.accountsById[t.accountId]?.name.toLowerCase() ?? '';
+      final toAccountName =
+          data.accountsById[t.transferAccountId]?.name.toLowerCase() ?? '';
+      // "164" and "164.00" should both find a $164.00 transaction.
+      final amount = (t.amountMinorUnits / 100).toStringAsFixed(2);
+      return note.contains(_searchQuery) ||
+          categoryName.contains(_searchQuery) ||
+          accountName.contains(_searchQuery) ||
+          toAccountName.contains(_searchQuery) ||
+          amount.startsWith(_searchQuery);
     }).toList();
   }
 
@@ -182,7 +215,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Activity', style: Theme.of(context).textTheme.headlineSmall),
+                    Text(
+                      'Activity',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
                     Text(
                       '${filtered.length} items',
                       style: Theme.of(context).textTheme.bodyMedium,
@@ -191,9 +227,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+                  onChanged: (v) =>
+                      setState(() => _searchQuery = v.trim().toLowerCase()),
                   decoration: InputDecoration(
-                    hintText: 'Search note or category',
+                    hintText: 'Search note, category, account, or amount',
                     prefixIcon: const Icon(LucideIcons.search, size: 18),
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -247,7 +284,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -259,7 +298,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(height: 12),
-                      const Text('Nothing here', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text(
+                        'Nothing here',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                       const SizedBox(height: 8),
                       const Text('No transactions match this filter.'),
                     ],
@@ -302,7 +344,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(entry.key.toUpperCase(), style: Theme.of(context).textTheme.labelMedium),
+                  Text(
+                    entry.key.toUpperCase(),
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
                   Text(
                     formatMoney(total, showSign: true),
                     style: Theme.of(context).textTheme.labelMedium,
@@ -317,20 +362,24 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 final delay = (animIndex++).clamp(0, 12) * 30;
                 final category = data.categoriesById[t.categoryId];
                 return Container(
-                  decoration: isTablet && t.id == _selectedTransactionId
-                      ? BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                        )
-                      : null,
-                  child: TransactionTile(
-                    transaction: t,
-                    category: category,
-                    accountsById: data.accountsById,
-                    showDate: false,
-                    onTap: () => _openDetail(t, category, isTablet),
-                  ),
-                ).animate().fadeIn(delay: delay.ms, duration: 220.ms).slideX(begin: 0.02, end: 0);
+                      decoration: isTablet && t.id == _selectedTransactionId
+                          ? BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            )
+                          : null,
+                      child: TransactionTile(
+                        transaction: t,
+                        category: category,
+                        accountsById: data.accountsById,
+                        showDate: false,
+                        onTap: () => _openDetail(t, category, isTablet),
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(delay: delay.ms, duration: 220.ms)
+                    .slideX(begin: 0.02, end: 0);
               },
             ),
           ],
@@ -345,7 +394,11 @@ class _ActivityData {
   final Map<int, Category> categoriesById;
   final Map<int, Account> accountsById;
 
-  const _ActivityData(this.transactions, this.categoriesById, this.accountsById);
+  const _ActivityData(
+    this.transactions,
+    this.categoriesById,
+    this.accountsById,
+  );
 }
 
 class _FilterChip extends StatelessWidget {
@@ -361,6 +414,10 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(label: Text(label), selected: selected, onSelected: (_) => onTap());
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+    );
   }
 }

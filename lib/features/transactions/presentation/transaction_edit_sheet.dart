@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/models/money.dart';
 import '../../../core/widgets/money_text.dart';
 
 class TransactionEditResult {
@@ -81,12 +82,12 @@ class _TransactionEditSheetState extends State<_TransactionEditSheet> {
   }
 
   void _save() {
-    final dollars = double.tryParse(_amountController.text.trim());
-    if (dollars == null || dollars <= 0) return;
+    final minorUnits = parseMoneyMinorUnits(_amountController.text);
+    if (minorUnits == null || minorUnits <= 0) return;
     final sign = widget.initialAmountMinorUnits < 0 ? -1 : 1;
     Navigator.of(context).pop(
       TransactionEditResult(
-        amountMinorUnits: sign * (dollars * 100).round(),
+        amountMinorUnits: sign * minorUnits,
         occurredAt: _occurredAt,
         note: _noteController.text.trim(),
       ),
@@ -113,7 +114,10 @@ class _TransactionEditSheetState extends State<_TransactionEditSheet> {
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Cancel'),
               ),
-              const Text('Edit transaction', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'Edit transaction',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               TextButton(onPressed: _save, child: const Text('Save')),
             ],
           ),

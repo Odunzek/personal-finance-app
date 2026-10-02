@@ -53,7 +53,10 @@ void main() {
       MaterialApp(home: SignInScreen(authRepository: repo)),
     );
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'a@b.com');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'a@b.com',
+    );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Password'),
       'password1',
@@ -73,7 +76,10 @@ void main() {
     await tester.tap(find.text("Don't have an account? Sign up"));
     await tester.pump();
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'a@b.com');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'a@b.com',
+    );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Password'),
       'password1',
@@ -91,7 +97,10 @@ void main() {
       MaterialApp(home: SignInScreen(authRepository: repo)),
     );
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'a@b.com');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'a@b.com',
+    );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Password'),
       'password1',

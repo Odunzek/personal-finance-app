@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
@@ -14,11 +16,17 @@ class LockScreen extends StatefulWidget {
 }
 
 class _LockScreenState extends State<LockScreen> {
+  static const _maxAttemptsBeforeCooldown = 5;
+  static const _cooldown = Duration(seconds: 30);
+
   final _auth = LocalAuthentication();
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   bool _error = false;
   bool _checking = false;
+  int _failedAttempts = 0;
+  DateTime? _cooldownUntil;
+  Timer? _cooldownTicker;
 
   @override
   void initState() {
@@ -28,10 +36,18 @@ class _LockScreenState extends State<LockScreen> {
 
   @override
   void dispose() {
+    _cooldownTicker?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
   }
+
+  bool get _coolingDown =>
+      _cooldownUntil != null && DateTime.now().isBefore(_cooldownUntil!);
+
+  int get _cooldownSecondsLeft => _coolingDown
+      ? _cooldownUntil!.difference(DateTime.now()).inSeconds + 1
+      : 0;
 
   Future<void> _tryBiometric() async {
     var unlocked = false;
@@ -62,8 +78,27 @@ class _LockScreenState extends State<LockScreen> {
     _focusNode.requestFocus();
   }
 
+  void _startCooldown() {
+    _cooldownUntil = DateTime.now().add(_cooldown);
+    _failedAttempts = 0;
+    _cooldownTicker?.cancel();
+    _cooldownTicker = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (!_coolingDown) {
+        timer.cancel();
+        setState(() => _cooldownUntil = null);
+        _focusNode.requestFocus();
+      } else {
+        setState(() {});
+      }
+    });
+  }
+
   Future<void> _submit() async {
-    if (_checking) return;
+    if (_checking || _coolingDown) return;
     setState(() => _checking = true);
     final ok = await PinVault.verifyPin(_controller.text);
     if (!mounted) return;
@@ -75,6 +110,10 @@ class _LockScreenState extends State<LockScreen> {
       _error = true;
       _controller.clear();
       _checking = false;
+      _failedAttempts++;
+      if (_failedAttempts >= _maxAttemptsBeforeCooldown) {
+        _startCooldown();
+      }
     });
   }
 
@@ -89,6 +128,7 @@ class _LockScreenState extends State<LockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final coolingDown = _coolingDown;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -111,6 +151,7 @@ class _LockScreenState extends State<LockScreen> {
                 TextField(
                   controller: _controller,
                   focusNode: _focusNode,
+                  enabled: !coolingDown,
                   obscureText: true,
                   obscuringCharacter: '●',
                   keyboardType: TextInputType.number,
@@ -123,9 +164,18 @@ class _LockScreenState extends State<LockScreen> {
                       ?.copyWith(letterSpacing: 20),
                   decoration: InputDecoration(
                     counterText: '',
-                    errorText: _error ? 'That didn\'t match.' : null,
+                    errorText: coolingDown
+                        ? 'Too many attempts — wait '
+                              '$_cooldownSecondsLeft s.'
+                        : (_error ? 'That didn\'t match.' : null),
                   ),
                   onChanged: _onChanged,
+                ),
+                const SizedBox(height: 20),
+                TextButton.icon(
+                  onPressed: coolingDown ? null : _tryBiometric,
+                  icon: const Icon(LucideIcons.fingerprint, size: 18),
+                  label: const Text('Use fingerprint'),
                 ),
               ],
             ),

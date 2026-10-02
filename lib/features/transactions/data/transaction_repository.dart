@@ -175,7 +175,12 @@ class SupabaseTransactionRepository implements TransactionRepository {
     if (occurredAt != null) {
       updates['occurred_at'] = occurredAt.toUtc().toIso8601String();
     }
-    if (note != null) updates['note'] = note;
+    // An empty string is an explicit "clear the note" (stored as NULL,
+    // matching how creation stores absent notes); null means "leave as-is".
+    // Without this, a note once set could never be removed.
+    if (note != null) {
+      updates['note'] = note.trim().isEmpty ? null : note.trim();
+    }
     await supabase.from('transactions').update(updates).eq('id', id);
   }
 

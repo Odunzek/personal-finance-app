@@ -70,6 +70,13 @@ class _StatementOptionsSheetState extends State<_StatementOptionsSheet> {
     if (picked != null) setState(() => _to = picked);
   }
 
+  void _applyPreset(DateTime from, DateTime to) {
+    setState(() {
+      _from = from;
+      _to = to;
+    });
+  }
+
   void _submit() {
     Navigator.of(context)
         .pop(StatementOptions(account: _account, from: _from, to: _to));
@@ -115,6 +122,44 @@ class _StatementOptionsSheetState extends State<_StatementOptionsSheet> {
               ],
             ),
             const SizedBox(height: 16),
+            Text('Period', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ActionChip(
+                  label: const Text('This month'),
+                  onPressed: () {
+                    final now = DateTime.now();
+                    _applyPreset(
+                      DateTime(now.year, now.month, 1),
+                      DateTime(now.year, now.month + 1, 0),
+                    );
+                  },
+                ),
+                ActionChip(
+                  label: const Text('Last month'),
+                  onPressed: () {
+                    final now = DateTime.now();
+                    _applyPreset(
+                      DateTime(now.year, now.month - 1, 1),
+                      DateTime(now.year, now.month, 0),
+                    );
+                  },
+                ),
+                ActionChip(
+                  label: const Text('This year'),
+                  onPressed: () {
+                    final now = DateTime.now();
+                    _applyPreset(
+                      DateTime(now.year, 1, 1),
+                      DateTime(now.year, 12, 31),
+                    );
+                  },
+                ),
+              ],
+            ),
             Row(
               children: [
                 Expanded(

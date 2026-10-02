@@ -46,12 +46,7 @@ class FinanceApp extends StatelessWidget {
           return ValueListenableBuilder<bool>(
             valueListenable: AppLockController.instance.isLocked,
             builder: (context, locked, _) {
-              return Stack(
-                children: [
-                  ?child,
-                  if (locked) const LockScreen(),
-                ],
-              );
+              return Stack(children: [?child, if (locked) const LockScreen()]);
             },
           );
         },

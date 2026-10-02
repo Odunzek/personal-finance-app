@@ -7,6 +7,7 @@ import '../../../core/models/category.dart';
 import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
@@ -72,6 +73,15 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
     );
   }
 
+  void _reload() {
+    setState(() {
+      _dataFuture = widget.transactionRepository.listTransactions(
+        widget.profile.id,
+        categoryId: widget.category.id,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,6 +104,9 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
         child: FutureBuilder<List<model.Transaction>>(
           future: _dataFuture,
           builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return AsyncErrorView(onRetry: _reload);
+            }
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
@@ -174,14 +187,7 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
             TransactionDetailScreen(transaction: t, category: widget.category),
       ),
     );
-    if (changed == true) {
-      setState(() {
-        _dataFuture = widget.transactionRepository.listTransactions(
-          widget.profile.id,
-          categoryId: widget.category.id,
-        );
-      });
-    }
+    if (changed == true) _reload();
   }
 
   List<Widget> _transactionList(
@@ -216,6 +222,7 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
                   TransactionTile(
                     transaction: transactions[i],
                     category: widget.category,
+                    showCategoryName: false,
                     onTap: () => _openTransaction(transactions[i]),
                   ),
                 ],

@@ -46,7 +46,10 @@ class ReminderService {
   /// acceptable trade for a best-effort personal reminder rather than adding
   /// another native plugin dependency just for this.
   void _setLocalTimeZoneFromDeviceOffset() {
-    final offsetHours = DateTime.now().timeZoneOffset.inHours;
+    // Etc/GMT zones only exist in whole hours, so round to the nearest hour
+    // rather than truncating — a half-hour zone (Newfoundland, India) lands
+    // at most 30 minutes off instead of a full hour.
+    final offsetHours = (DateTime.now().timeZoneOffset.inMinutes / 60).round();
     final sign = offsetHours <= 0 ? '+' : '-';
     final name = 'Etc/GMT$sign${offsetHours.abs()}';
     try {

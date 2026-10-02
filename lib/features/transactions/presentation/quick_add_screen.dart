@@ -6,9 +6,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
+import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' show TransactionKind;
 import '../../../core/notifications/budget_alert_service.dart';
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
@@ -81,7 +83,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   }
 
   int get _amountMinorUnits =>
-      ((double.tryParse(_amountController.text) ?? 0) * 100).round();
+      parseMoneyMinorUnits(_amountController.text) ?? 0;
 
   bool get _canSave {
     if (_amountMinorUnits <= 0 || _saving) return false;
@@ -135,6 +137,8 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
         }
       }
       if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) showActionError(context, 'Saving');
     } finally {
       if (mounted) setState(() => _saving = false);
     }

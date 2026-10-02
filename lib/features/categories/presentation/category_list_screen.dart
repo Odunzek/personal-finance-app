@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/default_categories.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../data/category_repository.dart';
@@ -138,6 +139,9 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
         child: FutureBuilder<List<Category>>(
           future: _categoriesFuture,
           builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return AsyncErrorView(onRetry: _reload);
+            }
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }

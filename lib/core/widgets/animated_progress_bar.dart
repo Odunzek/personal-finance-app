@@ -25,7 +25,9 @@ class AnimatedProgressBar extends StatelessWidget {
             value: animatedValue,
             minHeight: height,
             color: color ?? Theme.of(context).colorScheme.primary,
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            backgroundColor: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest,
           );
         },
       ),

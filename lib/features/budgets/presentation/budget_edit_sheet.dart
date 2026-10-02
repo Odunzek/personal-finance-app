@@ -61,7 +61,9 @@ class _BudgetEditSheetState extends State<_BudgetEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final ratio = _limit == 0 ? 0.0 : (widget.spentMinorUnits / _limit).clamp(0, 1.5);
+    final ratio = _limit == 0
+        ? 0.0
+        : (widget.spentMinorUnits / _limit).clamp(0, 1.5);
     final color = ratio >= 1
         ? Theme.of(context).colorScheme.error
         : ratio >= 0.7
@@ -91,9 +93,9 @@ class _BudgetEditSheetState extends State<_BudgetEditSheet> {
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               TextButton(
-                onPressed: () => Navigator.of(
-                  context,
-                ).pop(BudgetEditResult(limitMinorUnits: _limit)),
+                onPressed: () =>
+                    Navigator.of(context)
+                        .pop(BudgetEditResult(limitMinorUnits: _limit)),
                 child: const Text('Done'),
               ),
             ],

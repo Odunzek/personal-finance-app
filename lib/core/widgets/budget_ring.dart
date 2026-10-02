@@ -37,7 +37,10 @@ class BudgetRing extends StatelessWidget {
           ),
           child: center == null
               ? null
-              : SizedBox.square(dimension: size, child: Center(child: center)),
+              : SizedBox.square(
+                  dimension: size,
+                  child: Center(child: center),
+                ),
         );
       },
     );

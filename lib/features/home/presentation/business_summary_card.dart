@@ -36,7 +36,10 @@ class _BusinessSummaryCardState extends State<BusinessSummaryCard> {
     final now = DateTime.now();
     switch (period) {
       case _Period.month:
-        return (DateTime(now.year, now.month, 1), DateTime(now.year, now.month + 1, 1));
+        return (
+          DateTime(now.year, now.month, 1),
+          DateTime(now.year, now.month + 1, 1),
+        );
       case _Period.quarter:
         final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
         return (
@@ -57,7 +60,8 @@ class _BusinessSummaryCardState extends State<BusinessSummaryCard> {
     final spentByCategoryId = <int, int>{};
     for (final t in widget.allTransactions) {
       if (t.isTransfer) continue;
-      if (t.occurredAt.isBefore(start) || !t.occurredAt.isBefore(endExclusive)) {
+      if (t.occurredAt.isBefore(start) ||
+          !t.occurredAt.isBefore(endExclusive)) {
         continue;
       }
       if (t.type == model.TransactionKind.income) {
@@ -70,8 +74,8 @@ class _BusinessSummaryCardState extends State<BusinessSummaryCard> {
     }
     final netIncome = revenue - expense;
 
-    final topCategories =
-        spentByCategoryId.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final topCategories = spentByCategoryId.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return Card(
       margin: EdgeInsets.zero,
@@ -103,7 +107,10 @@ class _BusinessSummaryCardState extends State<BusinessSummaryCard> {
                 SegmentedButton<_Period>(
                   segments: const [
                     ButtonSegment(value: _Period.month, label: Text('Month')),
-                    ButtonSegment(value: _Period.quarter, label: Text('Quarter')),
+                    ButtonSegment(
+                      value: _Period.quarter,
+                      label: Text('Quarter'),
+                    ),
                     ButtonSegment(value: _Period.year, label: Text('Year')),
                   ],
                   selected: {_period},
@@ -164,7 +171,8 @@ class _BusinessSummaryCardState extends State<BusinessSummaryCard> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          widget.categoriesById[entry.key]?.name ?? 'Uncategorized',
+                          widget.categoriesById[entry.key]?.name ??
+                              'Uncategorized',
                         ),
                       ),
                       MoneyText(-entry.value, fontSize: 14),
@@ -184,7 +192,11 @@ class _Figure extends StatelessWidget {
   final int amount;
   final Color color;
 
-  const _Figure({required this.label, required this.amount, required this.color});
+  const _Figure({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {

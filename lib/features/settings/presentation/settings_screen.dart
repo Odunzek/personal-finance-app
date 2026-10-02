@@ -15,6 +15,7 @@ import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/notifications/reminder_service.dart';
 import '../../../core/security/pin_setup_screen.dart';
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../../core/security/pin_vault.dart';
 import '../../../core/theme/theme_controller.dart';
@@ -149,8 +150,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final results = await Future.wait([
         widget.transactionRepository.listTransactions(widget.profile.id),
-        widget.categoryRepository.listActiveCategories(widget.profile.id),
-        widget.accountRepository.listActiveAccounts(widget.profile.id),
+        // All, not just active: archived categories/accounts must still
+        // export by name rather than as blanks.
+        widget.categoryRepository.listAllCategories(widget.profile.id),
+        widget.accountRepository.listAllAccounts(widget.profile.id),
       ]);
       final transactions = results[0] as List<model.Transaction>;
       final categories = results[1] as List<Category>;
@@ -177,6 +180,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           subject: 'Kinscope transactions — ${widget.profile.displayName}',
         ),
       );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Export');
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -204,10 +209,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // transaction on the chosen final day falls out of the statement.
           to: DateTime(options.to.year, options.to.month, options.to.day + 1),
         ),
-        widget.categoryRepository.listActiveCategories(widget.profile.id),
+        // All, not just active: the statement's history must resolve names
+        // for categories and accounts archived since.
+        widget.categoryRepository.listAllCategories(widget.profile.id),
+        widget.accountRepository.listAllAccounts(widget.profile.id),
       ]);
       final allInRange = results[0] as List<model.Transaction>;
       final categories = results[1] as List<Category>;
+      final allAccounts = results[2] as List<Account>;
       // Filtering by accountId alone only matches the "from" side of a
       // transfer, so a statement for e.g. Visa would miss money transferred
       // into it from Cash. Match either side, same as computeAccountBalance.
@@ -229,11 +238,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         to: options.to,
         transactions: transactions,
         categoriesById: {for (final c in categories) c.id: c},
-        accountsById: {for (final a in accounts) a.id: a},
+        accountsById: {for (final a in allAccounts) a.id: a},
       );
 
       if (!mounted) return;
       await Printing.layoutPdf(onLayout: (_) => doc.save());
+    } catch (_) {
+      if (mounted) showActionError(context, 'Generating the statement');
     } finally {
       if (mounted) setState(() => _printing = false);
     }
@@ -245,10 +256,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Reset data?'),
         content: Text(
-          'This permanently deletes every transaction, budget, and savings '
-          'target for "${widget.profile.displayName}". Your categories and '
-          'profile stay in place, so you can start fresh right away. This '
-          'cannot be undone.',
+          'This permanently deletes every transaction, budget, savings '
+          'target, and recurring rule for "${widget.profile.displayName}". '
+          'Your categories, accounts, wishlist, and the profile itself stay '
+          'in place, so you can start fresh right away. This cannot be '
+          'undone.',
         ),
         actions: [
           TextButton(
@@ -274,10 +286,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await widget.recurringRuleRepository.deleteAllForProfile(
         widget.profile.id,
       );
+      widget.onDataChanged?.call();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('All data cleared. Starting fresh.')),
       );
+    } catch (_) {
+      // The three deletes run in sequence, so a mid-way failure can leave a
+      // partial reset — surface it so the user knows to run it again.
+      if (mounted) {
+        showActionError(context, 'Reset (it may be partial — run it again)');
+      }
     } finally {
       if (mounted) setState(() => _resetting = false);
     }

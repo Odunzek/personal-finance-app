@@ -12,6 +12,7 @@ import '../../../core/models/money.dart';
 import '../../../core/models/month_range.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/models/recurring_rule.dart';
@@ -91,24 +92,26 @@ class _TrendsScreenState extends State<TrendsScreen> {
     final latest = months.last.endExclusive;
 
     final results = await Future.wait([
-      widget.transactionRepository.listTransactions(
-        widget.profile.id,
-        from: earliest,
-        to: latest,
-      ),
-      widget.categoryRepository.listActiveCategories(widget.profile.id),
-      // Net worth at each checkpoint depends on every transaction since the
-      // account was opened, not just the last 6 months, so this is fetched
-      // unbounded rather than reusing the windowed query above.
+      // History must keep resolving names and balances for categories and
+      // accounts that have since been archived — otherwise deactivating one
+      // silently rewrites past months.
+      widget.categoryRepository.listAllCategories(widget.profile.id),
+      // Net worth checkpoints depend on every transaction ever, so fetch
+      // unbounded once and slice the 6-month window from it locally.
       widget.transactionRepository.listTransactions(widget.profile.id),
-      widget.accountRepository.listActiveAccounts(widget.profile.id),
+      widget.accountRepository.listAllAccounts(widget.profile.id),
       widget.recurringRuleRepository.listActiveRules(widget.profile.id),
     ]);
-    final transactions = results[0] as List<model.Transaction>;
-    final categories = {for (final c in results[1] as List<Category>) c.id: c};
-    final allTransactions = results[2] as List<model.Transaction>;
-    final accounts = results[3] as List<Account>;
-    final activeRules = results[4] as List<RecurringRule>;
+    final categories = {for (final c in results[0] as List<Category>) c.id: c};
+    final allTransactions = results[1] as List<model.Transaction>;
+    final accounts = results[2] as List<Account>;
+    final activeRules = results[3] as List<RecurringRule>;
+    final transactions = allTransactions
+        .where(
+          (t) =>
+              !t.occurredAt.isBefore(earliest) && t.occurredAt.isBefore(latest),
+        )
+        .toList();
 
     var todayNetWorth = 0;
     for (final account in accounts) {
@@ -371,6 +374,11 @@ class _TrendsScreenState extends State<TrendsScreen> {
     return FutureBuilder<_TrendsData>(
       future: _dataFuture,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return AsyncErrorView(
+            onRetry: () => setState(() => _dataFuture = _fetch()),
+          );
+        }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }

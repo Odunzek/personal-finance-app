@@ -8,6 +8,7 @@ import '../../../core/models/category.dart';
 import '../../../core/models/month_range.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/budget_ring.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../categories/data/category_repository.dart';
@@ -193,6 +194,9 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
       child: FutureBuilder<_BudgetsData>(
         future: _dataFuture,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return AsyncErrorView(onRetry: () => setState(_load));
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }

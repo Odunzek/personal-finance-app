@@ -7,6 +7,7 @@ import '../../../core/models/account_balance.dart';
 import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart';
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../transactions/data/transaction_repository.dart';
@@ -115,6 +116,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
         child: FutureBuilder<_AccountsData>(
           future: _dataFuture,
           builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return AsyncErrorView(onRetry: _reload);
+            }
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }

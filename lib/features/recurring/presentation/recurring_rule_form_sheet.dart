@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/models/category.dart';
 import '../../../core/models/account.dart' as account_model;
+import '../../../core/models/money.dart';
 import '../../../core/models/recurring_rule.dart';
 import '../../../core/models/transaction.dart';
 
@@ -105,8 +106,8 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
   }
 
   void _submit() {
-    final amount = double.tryParse(_amountController.text.trim()) ?? 0;
-    if (amount <= 0 || _account == null) return;
+    final amountMinorUnits = parseMoneyMinorUnits(_amountController.text) ?? 0;
+    if (amountMinorUnits <= 0 || _account == null) return;
     final isTransfer = _type == TransactionKind.transfer;
     if (isTransfer && (_toAccount == null || _toAccount!.id == _account!.id)) {
       return;
@@ -118,7 +119,7 @@ class _RecurringRuleFormSheetState extends State<_RecurringRuleFormSheet> {
         categoryId: isTransfer ? null : _category!.id,
         toAccountId: isTransfer ? _toAccount!.id : null,
         type: _type,
-        amountMinorUnits: (amount * 100).round(),
+        amountMinorUnits: amountMinorUnits,
         frequency: _frequency,
         nextDueDate: _nextDueDate,
         note: _noteController.text.trim().isEmpty

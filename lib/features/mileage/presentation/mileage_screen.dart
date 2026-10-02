@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/models/mileage_trip.dart';
 import '../../../core/models/money.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../data/mileage_repository.dart';
 import 'mileage_trip_form_sheet.dart';
@@ -43,14 +44,19 @@ class _MileageScreenState extends State<MileageScreen> {
   Future<void> _addTrip() async {
     final result = await showMileageTripFormSheet(context);
     if (result == null) return;
-    await widget.mileageRepository.createTrip(
-      profileId: widget.profile.id,
-      occurredAt: result.occurredAt,
-      destination: result.destination,
-      purpose: result.purpose,
-      kilometers: result.kilometers,
-    );
-    _reload();
+    try {
+      await widget.mileageRepository.createTrip(
+        profileId: widget.profile.id,
+        occurredAt: result.occurredAt,
+        destination: result.destination,
+        purpose: result.purpose,
+        kilometers: result.kilometers,
+      );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Saving the trip');
+      return;
+    }
+    if (mounted) _reload();
   }
 
   Future<void> _confirmDelete(MileageTrip trip) async {
@@ -75,8 +81,13 @@ class _MileageScreenState extends State<MileageScreen> {
       ),
     );
     if (confirmed != true) return;
-    await widget.mileageRepository.deleteTrip(trip.id);
-    _reload();
+    try {
+      await widget.mileageRepository.deleteTrip(trip.id);
+    } catch (_) {
+      if (mounted) showActionError(context, 'Deleting the trip');
+      return;
+    }
+    if (mounted) _reload();
   }
 
   @override
@@ -87,12 +98,21 @@ class _MileageScreenState extends State<MileageScreen> {
         child: FutureBuilder<List<MileageTrip>>(
           future: _tripsFuture,
           builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return AsyncErrorView(onRetry: _reload);
+            }
             final all = snapshot.data;
             if (all == null) {
               return const Center(child: CircularProgressIndicator());
             }
+            // Secondary sort on id keeps same-day trips in a stable order,
+            // so per-trip deduction attribution across the 5,000 km tier
+            // boundary can't shuffle between loads.
             final trips = all.where((t) => t.occurredAt.year == _year).toList()
-              ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+              ..sort((a, b) {
+                final byDate = b.occurredAt.compareTo(a.occurredAt);
+                return byDate != 0 ? byDate : b.id.compareTo(a.id);
+              });
 
             // Deduction is tiered on the year's running total, so walk trips
             // oldest-first to get each one's correct blended rate, then show
@@ -222,25 +242,48 @@ class _MileageScreenState extends State<MileageScreen> {
                                   if (trip.purpose != null) trip.purpose!,
                                 ].join(' · '),
                               ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    '${trip.kilometers.toStringAsFixed(1)} km',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                  Text(
-                                    formatMoney(deductionById[trip.id] ?? 0),
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant,
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '${trip.kilometers.toStringAsFixed(1)} km',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                      Text(
+                                        formatMoney(
+                                          deductionById[trip.id] ?? 0,
                                         ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _confirmDelete(trip),
+                                    icon: const Icon(
+                                      LucideIcons.trash2,
+                                      size: 17,
+                                    ),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    visualDensity: VisualDensity.compact,
+                                    tooltip: 'Delete trip',
                                   ),
                                 ],
                               ),

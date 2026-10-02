@@ -49,12 +49,17 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _catchUpRecurringRules() async {
-    final createdAny = await RecurringRuleRunner.catchUp(
-      recurringRuleRepository: widget.recurringRuleRepository,
-      transactionRepository: widget.transactionRepository,
-      profileId: widget.profile.id,
-    );
-    if (createdAny && mounted) setState(() => _refreshTick++);
+    try {
+      final createdAny = await RecurringRuleRunner.catchUp(
+        recurringRuleRepository: widget.recurringRuleRepository,
+        transactionRepository: widget.transactionRepository,
+        profileId: widget.profile.id,
+      );
+      if (createdAny && mounted) setState(() => _refreshTick++);
+    } catch (_) {
+      // Offline at launch — skip silently; the next profile open catches up,
+      // and rules advance per-occurrence so nothing is double-created.
+    }
   }
 
   Future<void> _openQuickAdd() async {
@@ -97,10 +102,12 @@ class _MainShellState extends State<MainShell> {
         profile: widget.profile,
         onOpenSettings: _openSettings,
         onOpenWishlist: _openWishlist,
+        onDataChanged: _bumpRefresh,
       ),
       ActivityScreen(
         key: ValueKey('activity-$_refreshTick'),
         profile: widget.profile,
+        onDataChanged: _bumpRefresh,
       ),
       BudgetsScreen(
         key: ValueKey('budgets-$_refreshTick'),

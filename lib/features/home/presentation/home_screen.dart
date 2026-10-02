@@ -8,6 +8,7 @@ import '../../../core/models/account_balance.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/orbit_watermark.dart';
 import '../../accounts/data/account_repository.dart';
@@ -91,6 +92,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: FutureBuilder<HomeData>(
         future: _dataFuture,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return AsyncErrorView(onRetry: () => setState(_load));
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
