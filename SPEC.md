@@ -13,7 +13,7 @@ iOS is not needed now but is a future option without a rewrite, since Flutter sh
 ## Platform & Backend
 - **Flutter (Dart)** — single codebase across Android, web, and (later, if wanted) iOS/desktop
 - **Supabase** (Postgres + Auth + Realtime) as the backend — a managed service, not self-hosted, so there is no server to build or maintain
-- **Security model: end-to-end encryption.** Financial data is encrypted on-device before it is ever sent to Supabase. Supabase stores and syncs only ciphertext — it never holds readable financial data. Cross-device key handling (so phone/tablet/laptop can all decrypt the same data) is a deferred design detail, to be solved during the sync/security implementation phase — not blocking earlier feature work.
+- **Security model (as implemented): Auth + RLS, not end-to-end encryption.** Every table has Postgres Row Level Security forced, scoping each row to the owning Supabase Auth user, and DB triggers block cross-profile references. Supabase stores plaintext rows protected by its standard encryption-at-rest. Client-side (end-to-end) encryption was the original aspiration but is deliberately deferred: it breaks server-side querying and the cross-device key-exchange problem is unsolved. Revisit when the app moves to the planned self-hosted NAS (early 2027), where E2E matters more.
 - **Auth**: Supabase Auth gates the app. This also means the data model is already multi-user-capable (each row scoped to the authenticated user) at effectively no extra cost, even though only the owner uses it today.
 - **App-level lock**: in addition to the Supabase account login, the phone/tablet apps also get a local PIN/biometric lock, matching the original "protect this if my device is picked up" requirement.
 - Manual transaction entry only — no bank account integration.
@@ -53,7 +53,7 @@ Bottom nav, 5 destinations: **Home**, **Activity**, **Budgets** (includes the sa
 - Home-screen quick-add widget
 - AI-based insights/analysis
 - Multi-currency per transaction
-- Full cross-device encryption key exchange UX (v1 ships with a working interim approach; hardened later)
+- Client-side (end-to-end) encryption, including cross-device key exchange — see Security model above
 - Native iOS build (code stays iOS-ready; the build step itself waits for Mac/Xcode access)
 
 ## Architecture requirement

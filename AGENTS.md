@@ -1,4 +1,4 @@
-# CLAUDE.md — FINANCE_APP
+# AGENTS.md — FINANCE_APP
 
 Personal, multi-device finance tracker. See `SPEC.md` for the full functional spec and v1 checklist — keep it in sync with reality as decisions evolve.
 
