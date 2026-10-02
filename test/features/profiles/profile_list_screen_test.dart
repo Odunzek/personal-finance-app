@@ -127,6 +127,9 @@ class _FakeCategoryRepository implements CategoryRepository {
   Future<void> recolorCategory(int id, int colorArgb) async {}
 
   @override
+  Future<void> reiconCategory(int id, String iconKey) async {}
+
+  @override
   Future<void> deactivateCategory(int id) async {}
 }
 

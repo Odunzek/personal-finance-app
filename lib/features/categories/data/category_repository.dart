@@ -22,6 +22,7 @@ abstract class CategoryRepository {
   Future<void> createCategories(int profileId, List<DefaultCategorySeed> seeds);
   Future<void> renameCategory(int id, String name);
   Future<void> recolorCategory(int id, int colorArgb);
+  Future<void> reiconCategory(int id, String iconKey);
 
   /// Soft-delete only. Categories are never hard-deleted once they may be
   /// referenced by transactions — see CLAUDE.md.
@@ -104,6 +105,14 @@ class SupabaseCategoryRepository implements CategoryRepository {
     await supabase
         .from('categories')
         .update({'color_argb': colorArgb})
+        .eq('id', id);
+  }
+
+  @override
+  Future<void> reiconCategory(int id, String iconKey) async {
+    await supabase
+        .from('categories')
+        .update({'icon_key': iconKey})
         .eq('id', id);
   }
 

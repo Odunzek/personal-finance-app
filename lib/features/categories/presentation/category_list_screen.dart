@@ -69,6 +69,12 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
         result.colorArgb,
       );
     }
+    if (result.iconKey != category.iconKey) {
+      await widget.categoryRepository.reiconCategory(
+        category.id,
+        result.iconKey,
+      );
+    }
     _reload();
   }
 
