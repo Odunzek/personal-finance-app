@@ -24,6 +24,7 @@ import '../../auth/data/auth_repository.dart';
 import '../../budgets/data/budget_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../../categories/presentation/category_list_screen.dart';
+import '../../mileage/presentation/mileage_screen.dart';
 import '../../profiles/presentation/profile_list_screen.dart';
 import '../../recurring/data/recurring_rule_repository.dart';
 import '../../recurring/presentation/recurring_rule_list_screen.dart';
@@ -346,6 +347,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   widget.onDataChanged?.call();
                 },
               ),
+              if (widget.profile.type == ProfileType.business) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(LucideIcons.car),
+                  title: const Text('Mileage log'),
+                  subtitle: const Text(
+                    'Track business trips for the CRA per-km deduction',
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => MileageScreen(profile: widget.profile),
+                    ),
+                  ),
+                ),
+              ],
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(LucideIcons.sun),
