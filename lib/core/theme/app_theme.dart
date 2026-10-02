@@ -10,13 +10,15 @@ class AppTheme {
   static ThemeData get dark => _build(Brightness.dark, AppColors.dark);
 
   static ThemeData _build(Brightness brightness, AppPalette p) {
-    // Seed the whole Material 3 color scheme from our brand teal so derived
-    // roles (primaryContainer, secondaryContainer, etc. - used by FAB, chips,
-    // SegmentedButton) land in the teal family instead of Flutter's generic
-    // default purple, then pin the specific roles we have exact brand values
-    // for on top.
+    // Seed the whole Material 3 color scheme from this theme's own accent so
+    // derived roles (primaryContainer, secondaryContainer, etc. - used by
+    // FAB, chips, SegmentedButton) land in that same family instead of
+    // Flutter's generic default purple, then pin the specific roles we have
+    // exact brand values for on top. Light and dark intentionally use
+    // different accents (teal vs. violet), so this seeds per-palette rather
+    // than from one shared constant.
     final seededScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.accent,
+      seedColor: p.accent,
       brightness: brightness,
     );
     final base = ThemeData(colorScheme: seededScheme, useMaterial3: true);
@@ -27,8 +29,8 @@ class AppTheme {
       textTheme: bodyFont.apply(bodyColor: p.ink, displayColor: p.ink),
       colorScheme: seededScheme.copyWith(
         brightness: brightness,
-        primary: AppColors.accent,
-        onPrimary: AppColors.onAccent,
+        primary: p.accent,
+        onPrimary: p.onAccent,
         surface: p.card,
         onSurface: p.ink,
         error: p.over,
@@ -44,7 +46,7 @@ class AppTheme {
         elevation: 8,
         shadowColor: brightness == Brightness.dark
             ? Colors.black.withValues(alpha: 0.55)
-            : AppColors.accent.withValues(alpha: 0.18),
+            : p.accent.withValues(alpha: 0.18),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
           side: BorderSide(color: p.line),
@@ -53,8 +55,8 @@ class AppTheme {
       dividerTheme: DividerThemeData(color: p.line),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
-          foregroundColor: AppColors.onAccent,
+          backgroundColor: p.accent,
+          foregroundColor: p.onAccent,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -63,22 +65,22 @@ class AppTheme {
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.accent,
-        foregroundColor: AppColors.onAccent,
+        backgroundColor: p.accent,
+        foregroundColor: p.onAccent,
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(
-          selectedBackgroundColor: AppColors.accent,
-          selectedForegroundColor: AppColors.onAccent,
+          selectedBackgroundColor: p.accent,
+          selectedForegroundColor: p.onAccent,
         ),
       ),
       chipTheme: ChipThemeData(
-        selectedColor: AppColors.accent,
+        selectedColor: p.accent,
         labelStyle: TextStyle(color: p.ink),
-        secondarySelectedColor: AppColors.accent,
+        secondarySelectedColor: p.accent,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: AppColors.accent,
+        color: p.accent,
         linearTrackColor: p.track,
       ),
     );

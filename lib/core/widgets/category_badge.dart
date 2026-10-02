@@ -29,7 +29,7 @@ class CategoryBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = color ?? Theme.of(context).colorScheme.outlineVariant;
-    final isBrandTeal = base.toARGB32() == AppColors.accent.toARGB32();
+    final isBrandTeal = base.toARGB32() == AppColors.brandTeal.toARGB32();
     final highlight = isBrandTeal
         ? _brandTealHighlight
         : Color.lerp(base, Colors.white, 0.18)!;

@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const accent = Color(0xFF5CA2AC);
-  static const accentHover = Color(0xFF14BDBD);
-  static const onAccent = Color(0xFF04201F);
+  /// The literal brand teal — some categories (like the default "Groceries"
+  /// seed) are colored exactly this, and get a special on-brand gradient in
+  /// category_badge.dart regardless of which accent the active theme uses.
+  static const brandTeal = Color(0xFF5CA2AC);
+
   static const warning = Color(0xFFC98A16);
 
   static const light = AppPalette(
+    accent: Color(0xFF5CA2AC),
+    onAccent: Color(0xFF04201F),
     background: Color(0xFFFAF7F0),
     card: Color(0xFFFFFFFF),
     bar: Color(0xFFFFFFFF),
@@ -26,26 +30,34 @@ class AppColors {
     debtLine: Color(0xFFC6DFE3),
   );
 
+  // "Midnight Indigo" — cooler, bluer base than the original teal-on-black,
+  // with a soft violet accent reserved for dark mode (light mode keeps the
+  // brand teal). Positive/over keep a teal/coral family so money-flow colors
+  // stay readable and distinct from the violet accent.
   static const dark = AppPalette(
-    background: Color(0xFF0F1A1C),
-    card: Color(0xFF162426),
-    bar: Color(0xFF132022),
-    line: Color(0xFF233436),
-    track: Color(0xFF1E2E30),
-    chip: Color(0xFF1C2C2E),
-    ink: Color(0xFFEEF3F1),
-    muted: Color(0xFF8DA39E),
-    muted2: Color(0xFF7A8F8A),
-    accentText: Color(0xFF7FC3CC),
-    positive: Color(0xFF59BE93),
-    over: Color(0xFFE0765A),
-    warnText: Color(0xFFD9A63A),
-    debtBg: Color(0xFF122B2A),
-    debtLine: Color(0xFF1F4645),
+    accent: Color(0xFF9C8CFF),
+    onAccent: Color(0xFF15102E),
+    background: Color(0xFF11121C),
+    card: Color(0xFF1A1C2B),
+    bar: Color(0xFF14151F),
+    line: Color(0xFF282A3C),
+    track: Color(0xFF232539),
+    chip: Color(0xFF20222F),
+    ink: Color(0xFFECEBF5),
+    muted: Color(0xFF8C8BA3),
+    muted2: Color(0xFF78768C),
+    accentText: Color(0xFFB4A8FF),
+    positive: Color(0xFF4FC9C2),
+    over: Color(0xFFEC7A7A),
+    warnText: Color(0xFFE0A552),
+    debtBg: Color(0xFF231A33),
+    debtLine: Color(0xFF362A4A),
   );
 }
 
 class AppPalette {
+  final Color accent;
+  final Color onAccent;
   final Color background;
   final Color card;
   final Color bar;
@@ -63,6 +75,8 @@ class AppPalette {
   final Color debtLine;
 
   const AppPalette({
+    required this.accent,
+    required this.onAccent,
     required this.background,
     required this.card,
     required this.bar,

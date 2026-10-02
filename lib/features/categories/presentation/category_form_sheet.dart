@@ -83,99 +83,104 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
         top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.existing == null ? 'New category' : 'Edit category',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _nameController,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'Name'),
-          ),
-          const SizedBox(height: 16),
-          SegmentedButton<CategoryType>(
-            segments: const [
-              ButtonSegment(
-                value: CategoryType.expense,
-                label: Text('Expense'),
-              ),
-              ButtonSegment(value: CategoryType.income, label: Text('Income')),
-            ],
-            selected: {_type},
-            onSelectionChanged: (selection) =>
-                setState(() => _type = selection.first),
-          ),
-          const SizedBox(height: 16),
-          const Text('Color'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: kCategoryColors.map((color) {
-              final selected = color.toARGB32() == _colorArgb;
-              return GestureDetector(
-                onTap: () => setState(() => _colorArgb = color.toARGB32()),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.existing == null ? 'New category' : 'Edit category',
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<CategoryType>(
+              segments: const [
+                ButtonSegment(
+                  value: CategoryType.expense,
+                  label: Text('Expense'),
+                ),
+                ButtonSegment(
+                  value: CategoryType.income,
+                  label: Text('Income'),
+                ),
+              ],
+              selected: {_type},
+              onSelectionChanged: (selection) =>
+                  setState(() => _type = selection.first),
+            ),
+            const SizedBox(height: 16),
+            const Text('Color'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: kCategoryColors.map((color) {
+                final selected = color.toARGB32() == _colorArgb;
+                return GestureDetector(
+                  onTap: () => setState(() => _colorArgb = color.toARGB32()),
                   child: Container(
-                    width: selected ? 32 : 28,
-                    height: selected ? 32 : 28,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: selected
-                          ? Border.all(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              width: 2,
-                            )
-                          : null,
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: selected ? 32 : 28,
+                      height: selected ? 32 : 28,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: selected
+                            ? Border.all(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                width: 2,
+                              )
+                            : null,
+                      ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-          const Text('Icon'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: kCategoryIcons.entries.map((entry) {
-              final selected = entry.key == _iconKey;
-              return GestureDetector(
-                onTap: () => setState(() => _iconKey = entry.key),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected
-                        ? Theme.of(context).colorScheme.primary.withValues(
-                            alpha: 0.2,
-                          )
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            const Text('Icon'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: kCategoryIcons.entries.map((entry) {
+                final selected = entry.key == _iconKey;
+                return GestureDetector(
+                  onTap: () => setState(() => _iconKey = entry.key),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected
+                          ? Theme.of(context).colorScheme.primary
+                                .withValues(alpha: 0.2)
+                          : Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                    ),
+                    child: Icon(entry.value),
                   ),
-                  child: Icon(entry.value),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _submit,
-            child: Text(widget.existing == null ? 'Add' : 'Save'),
-          ),
-        ],
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _submit,
+              child: Text(widget.existing == null ? 'Add' : 'Save'),
+            ),
+          ],
+        ),
       ),
     );
   }
