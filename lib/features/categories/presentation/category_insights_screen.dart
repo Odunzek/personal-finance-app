@@ -11,6 +11,8 @@ import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../transactions/data/transaction_repository.dart';
+import '../../transactions/presentation/transaction_detail_screen.dart';
+import '../../transactions/presentation/transaction_tile.dart';
 import 'category_style_options.dart';
 
 enum _Granularity { day, week, month, year }
@@ -143,8 +145,85 @@ class _CategoryInsightsScreenState extends State<CategoryInsightsScreen> {
           const SizedBox(height: 12),
           _overspendLegend(context),
         ],
+        const SizedBox(height: 24),
+        ..._transactionList(context, all),
       ],
     );
+  }
+
+  /// Every transaction behind the total currently shown: the browsed month
+  /// for day/week granularity, the browsed year for month granularity, and
+  /// everything ever recorded for year granularity (there's no narrower
+  /// window left to pick).
+  List<model.Transaction> _transactionsInScope(List<model.Transaction> all) {
+    final inScope = switch (_granularity) {
+      _Granularity.year => all,
+      _Granularity.month => all.where((t) => t.occurredAt.year == _year),
+      _Granularity.week || _Granularity.day => all.where(
+        (t) => t.occurredAt.year == _year && t.occurredAt.month == _month,
+      ),
+    };
+    return inScope.toList()
+      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+  }
+
+  Future<void> _openTransaction(model.Transaction t) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            TransactionDetailScreen(transaction: t, category: widget.category),
+      ),
+    );
+    if (changed == true) {
+      setState(() {
+        _dataFuture = widget.transactionRepository.listTransactions(
+          widget.profile.id,
+          categoryId: widget.category.id,
+        );
+      });
+    }
+  }
+
+  List<Widget> _transactionList(
+    BuildContext context,
+    List<model.Transaction> all,
+  ) {
+    final transactions = _transactionsInScope(all);
+    return [
+      Text(
+        '${transactions.length} '
+        '${transactions.length == 1 ? 'transaction' : 'transactions'}',
+        style: Theme.of(context).textTheme.labelLarge,
+      ),
+      const SizedBox(height: 8),
+      if (transactions.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            'Nothing recorded for this period yet.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        )
+      else
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                for (var i = 0; i < transactions.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  TransactionTile(
+                    transaction: transactions[i],
+                    category: widget.category,
+                    onTap: () => _openTransaction(transactions[i]),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+    ];
   }
 
   Widget _overspendLegend(BuildContext context) {
