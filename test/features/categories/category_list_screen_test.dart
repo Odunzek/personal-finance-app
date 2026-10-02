@@ -128,6 +128,12 @@ void main() {
   });
 
   testWidgets('adding a category calls createCategory', (tester) async {
+    // The icon picker makes the sheet taller than the default 600px test
+    // surface, which would leave the Add button unhittable off-screen.
+    tester.view.physicalSize = const Size(800, 3600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final repo = _FakeCategoryRepository();
     await tester.pumpWidget(
       MaterialApp(

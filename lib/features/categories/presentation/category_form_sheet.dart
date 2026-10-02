@@ -149,31 +149,47 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
             ),
             const SizedBox(height: 16),
             const Text('Icon'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: kCategoryIcons.entries.map((entry) {
-                final selected = entry.key == _iconKey;
-                return GestureDetector(
-                  onTap: () => setState(() => _iconKey = entry.key),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: selected
-                          ? Theme.of(context).colorScheme.primary
-                                .withValues(alpha: 0.2)
-                          : Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
+            for (final group in kCategoryIconGroups) ...[
+              const SizedBox(height: 12),
+              Text(
+                group.label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: group.keys.map((key) {
+                  final selected = key == _iconKey;
+                  return GestureDetector(
+                    onTap: () => setState(() => _iconKey = key),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected
+                            ? Theme.of(context).colorScheme.primary
+                                  .withValues(alpha: 0.2)
+                            : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                        border: selected
+                            ? Border.all(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 2,
+                              )
+                            : null,
+                      ),
+                      child: Icon(iconForKey(key)),
                     ),
-                    child: Icon(entry.value),
-                  ),
-                );
-              }).toList(),
-            ),
+                  );
+                }).toList(),
+              ),
+            ],
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _submit,
