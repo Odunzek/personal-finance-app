@@ -34,17 +34,32 @@ class _LockScreenState extends State<LockScreen> {
   }
 
   Future<void> _tryBiometric() async {
+    var unlocked = false;
     try {
       final canCheck = await _auth.canCheckBiometrics;
-      if (!canCheck) return;
-      final ok = await _auth.authenticate(
-        localizedReason: 'Unlock Kinscope',
-        biometricOnly: true,
-      );
-      if (ok) AppLockController.instance.unlock();
+      if (canCheck) {
+        unlocked = await _auth.authenticate(
+          localizedReason: 'Unlock Kinscope',
+          biometricOnly: true,
+        );
+      }
     } catch (_) {
       // Fall back to PIN entry silently.
     }
+    if (!mounted) return;
+    if (unlocked) {
+      AppLockController.instance.unlock();
+      return;
+    }
+    // Only summon the keyboard once the biometric prompt is out of the
+    // way — an autofocus fired while that system dialog held window focus
+    // gets silently swallowed, leaving a focused field with no keyboard
+    // and no reliable way to bring one up. The short delay lets window
+    // focus actually return to the app first; a request made during the
+    // dialog's dismissal animation is dropped the same way.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    _focusNode.requestFocus();
   }
 
   Future<void> _submit() async {
@@ -96,7 +111,6 @@ class _LockScreenState extends State<LockScreen> {
                 TextField(
                   controller: _controller,
                   focusNode: _focusNode,
-                  autofocus: true,
                   obscureText: true,
                   obscuringCharacter: '●',
                   keyboardType: TextInputType.number,

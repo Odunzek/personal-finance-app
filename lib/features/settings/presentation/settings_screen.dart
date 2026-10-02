@@ -15,6 +15,7 @@ import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/notifications/reminder_service.dart';
 import '../../../core/security/pin_setup_screen.dart';
+import '../../../core/widgets/mural_background.dart';
 import '../../../core/security/pin_vault.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../main.dart';
@@ -198,7 +199,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         widget.transactionRepository.listTransactions(
           widget.profile.id,
           from: options.from,
-          to: options.to,
+          // The repository's `to` is exclusive; the picker's To is a date at
+          // midnight, so pass the following calendar day or every
+          // transaction on the chosen final day falls out of the statement.
+          to: DateTime(options.to.year, options.to.month, options.to.day + 1),
         ),
         widget.categoryRepository.listActiveCategories(widget.profile.id),
       ]);
@@ -284,8 +288,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 16),
         Card(
           margin: EdgeInsets.zero,
           child: Column(
@@ -526,16 +528,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
-      children: [
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: content,
-          ),
+    // This screen is pushed as its own route (not a MainShell tab), so it
+    // needs its own Scaffold — without one, the route paints over the raw
+    // window background, which reads as black in light mode.
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: MuralBackground.ambient(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: content,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
