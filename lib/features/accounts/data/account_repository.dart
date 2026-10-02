@@ -4,6 +4,11 @@ import '../../../core/supabase/supabase_client.dart';
 abstract class AccountRepository {
   Future<List<Account>> listActiveAccounts(int profileId);
 
+  /// Includes deactivated accounts — needed wherever history is computed or
+  /// names are resolved (net-worth checkpoints, exports, statements), since
+  /// archiving an account must never rewrite the past.
+  Future<List<Account>> listAllAccounts(int profileId);
+
   Future<Account> createAccount({
     required int profileId,
     required String name,
@@ -27,6 +32,18 @@ class SupabaseAccountRepository implements AccountRepository {
         .select()
         .eq('profile_id', profileId)
         .eq('is_active', true)
+        .order('sort_order');
+    return (rows as List)
+        .map((r) => Account.fromRow(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<Account>> listAllAccounts(int profileId) async {
+    final rows = await supabase
+        .from('accounts')
+        .select()
+        .eq('profile_id', profileId)
         .order('sort_order');
     return (rows as List)
         .map((r) => Account.fromRow(r as Map<String, dynamic>))

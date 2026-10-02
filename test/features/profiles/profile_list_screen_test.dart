@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:finance_app/core/models/account.dart';
 import 'package:finance_app/core/models/category.dart';
+import 'package:finance_app/core/models/default_categories.dart';
 import 'package:finance_app/core/models/profile.dart';
 import 'package:finance_app/features/accounts/data/account_repository.dart';
 import 'package:finance_app/features/auth/data/auth_repository.dart';
@@ -78,6 +79,10 @@ class _FakeCategoryRepository implements CategoryRepository {
       created.where((c) => c.profileId == profileId).toList();
 
   @override
+  Future<List<Category>> listAllCategories(int profileId) async =>
+      created.where((c) => c.profileId == profileId).toList();
+
+  @override
   Future<Category> createCategory({
     required int profileId,
     required String name,
@@ -100,6 +105,22 @@ class _FakeCategoryRepository implements CategoryRepository {
   }
 
   @override
+  Future<void> createCategories(
+    int profileId,
+    List<DefaultCategorySeed> seeds,
+  ) async {
+    for (final seed in seeds) {
+      await createCategory(
+        profileId: profileId,
+        name: seed.name,
+        type: seed.type,
+        colorArgb: seed.colorArgb,
+        iconKey: seed.iconKey,
+      );
+    }
+  }
+
+  @override
   Future<void> renameCategory(int id, String name) async {}
 
   @override
@@ -115,6 +136,10 @@ class _FakeAccountRepository implements AccountRepository {
 
   @override
   Future<List<Account>> listActiveAccounts(int profileId) async =>
+      created.where((a) => a.profileId == profileId).toList();
+
+  @override
+  Future<List<Account>> listAllAccounts(int profileId) async =>
       created.where((a) => a.profileId == profileId).toList();
 
   @override

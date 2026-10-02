@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finance_app/core/models/category.dart';
+import 'package:finance_app/core/models/default_categories.dart';
 import 'package:finance_app/core/models/profile.dart';
 import 'package:finance_app/features/categories/data/category_repository.dart';
 import 'package:finance_app/features/categories/presentation/category_list_screen.dart';
@@ -18,6 +19,10 @@ class _FakeCategoryRepository implements CategoryRepository {
   @override
   Future<List<Category>> listActiveCategories(int profileId) async =>
       categories.where((c) => c.isActive).toList();
+
+  @override
+  Future<List<Category>> listAllCategories(int profileId) async =>
+      List.of(categories);
 
   @override
   Future<Category> createCategory({
@@ -39,6 +44,22 @@ class _FakeCategoryRepository implements CategoryRepository {
     );
     categories.add(category);
     return category;
+  }
+
+  @override
+  Future<void> createCategories(
+    int profileId,
+    List<DefaultCategorySeed> seeds,
+  ) async {
+    for (final seed in seeds) {
+      await createCategory(
+        profileId: profileId,
+        name: seed.name,
+        type: seed.type,
+        colorArgb: seed.colorArgb,
+        iconKey: seed.iconKey,
+      );
+    }
   }
 
   @override
@@ -68,7 +89,10 @@ void main() {
     final repo = _FakeCategoryRepository();
     await tester.pumpWidget(
       MaterialApp(
-        home: CategoryListScreen(profile: _testProfile, categoryRepository: repo),
+        home: CategoryListScreen(
+          profile: _testProfile,
+          categoryRepository: repo,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -91,7 +115,10 @@ void main() {
     ]);
     await tester.pumpWidget(
       MaterialApp(
-        home: CategoryListScreen(profile: _testProfile, categoryRepository: repo),
+        home: CategoryListScreen(
+          profile: _testProfile,
+          categoryRepository: repo,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -104,7 +131,10 @@ void main() {
     final repo = _FakeCategoryRepository();
     await tester.pumpWidget(
       MaterialApp(
-        home: CategoryListScreen(profile: _testProfile, categoryRepository: repo),
+        home: CategoryListScreen(
+          profile: _testProfile,
+          categoryRepository: repo,
+        ),
       ),
     );
     await tester.pumpAndSettle();

@@ -9,13 +9,21 @@ abstract class ProfileRepository {
     ProfileType type = ProfileType.personal,
   });
   Future<void> renameProfile(int id, String displayName);
+
+  /// Soft-delete: archives the profile and everything under it instead of
+  /// cascading a hard delete — same rule as categories and accounts, so one
+  /// confirmation tap can never irrecoverably destroy a whole ledger.
   Future<void> deleteProfile(int id);
 }
 
 class SupabaseProfileRepository implements ProfileRepository {
   @override
   Future<List<Profile>> listProfiles() async {
-    final rows = await supabase.from('profiles').select().order('sort_order');
+    final rows = await supabase
+        .from('profiles')
+        .select()
+        .eq('is_active', true)
+        .order('sort_order');
     return (rows as List)
         .map((r) => Profile.fromRow(r as Map<String, dynamic>))
         .toList();
@@ -51,6 +59,6 @@ class SupabaseProfileRepository implements ProfileRepository {
 
   @override
   Future<void> deleteProfile(int id) async {
-    await supabase.from('profiles').delete().eq('id', id);
+    await supabase.from('profiles').update({'is_active': false}).eq('id', id);
   }
 }

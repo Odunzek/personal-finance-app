@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/models/account.dart';
 import '../../../core/models/default_categories.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../auth/data/auth_repository.dart';
@@ -58,29 +59,28 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
   Future<void> _createProfile({bool isFirstProfile = false}) async {
     final result = await showProfileFormSheet(context);
     if (result == null) return;
-    final created = await widget.profileRepository.createProfile(
-      displayName: result.displayName,
-      currencyCode: result.currencyCode,
-      type: result.type,
-    );
-    final seeds = result.type == ProfileType.business
-        ? kDefaultBusinessCategorySeeds
-        : kDefaultCategorySeeds;
-    for (final seed in seeds) {
-      await widget.categoryRepository.createCategory(
-        profileId: created.id,
-        name: seed.name,
-        type: seed.type,
-        colorArgb: seed.colorArgb,
-        iconKey: seed.iconKey,
+    final Profile created;
+    try {
+      created = await widget.profileRepository.createProfile(
+        displayName: result.displayName,
+        currencyCode: result.currencyCode,
+        type: result.type,
       );
+      final seeds = result.type == ProfileType.business
+          ? kDefaultBusinessCategorySeeds
+          : kDefaultCategorySeeds;
+      await widget.categoryRepository.createCategories(created.id, seeds);
+      await widget.accountRepository.createAccount(
+        profileId: created.id,
+        name: 'Cash',
+        type: AccountType.asset,
+        startingBalanceMinorUnits: 0,
+      );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Creating the profile');
+      _reload();
+      return;
     }
-    await widget.accountRepository.createAccount(
-      profileId: created.id,
-      name: 'Cash',
-      type: AccountType.asset,
-      startingBalanceMinorUnits: 0,
-    );
     if (isFirstProfile) {
       _openProfile(created);
       return;
@@ -106,10 +106,11 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete profile?'),
+        title: const Text('Remove profile?'),
         content: Text(
-          'This permanently deletes "${profile.displayName}" and all of '
-          'its categories and transactions. This cannot be undone.',
+          '"${profile.displayName}" will disappear from this list, but its '
+          'data is archived rather than destroyed — nothing is permanently '
+          'deleted.',
         ),
         actions: [
           TextButton(
@@ -118,13 +119,18 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: const Text('Remove'),
           ),
         ],
       ),
     );
     if (confirmed != true) return;
-    await widget.profileRepository.deleteProfile(profile.id);
+    try {
+      await widget.profileRepository.deleteProfile(profile.id);
+    } catch (_) {
+      if (mounted) showActionError(context, 'Removing the profile');
+      return;
+    }
     _reload();
   }
 
@@ -159,6 +165,9 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
         child: FutureBuilder<List<Profile>>(
           future: _profilesFuture,
           builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return AsyncErrorView(onRetry: _reload);
+            }
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
