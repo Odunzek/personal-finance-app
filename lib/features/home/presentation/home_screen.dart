@@ -32,6 +32,7 @@ class HomeScreen extends StatefulWidget {
   final AccountRepository accountRepository;
   final VoidCallback? onDataChanged;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenWishlist;
 
   HomeScreen({
     super.key,
@@ -41,6 +42,7 @@ class HomeScreen extends StatefulWidget {
     AccountRepository? accountRepository,
     this.onDataChanged,
     this.onOpenSettings,
+    this.onOpenWishlist,
   }) : transactionRepository =
            transactionRepository ?? SupabaseTransactionRepository(),
        categoryRepository = categoryRepository ?? SupabaseCategoryRepository(),
@@ -144,6 +146,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+            if (widget.onOpenWishlist != null)
+              IconButton(
+                onPressed: widget.onOpenWishlist,
+                icon: const Icon(LucideIcons.listChecks, size: 20),
+                tooltip: 'Wishlist',
+                visualDensity: VisualDensity.compact,
+              ),
             if (widget.onOpenSettings != null)
               IconButton(
                 onPressed: widget.onOpenSettings,

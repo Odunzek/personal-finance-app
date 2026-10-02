@@ -10,6 +10,7 @@ import '../../budgets/presentation/budgets_screen.dart';
 import '../../recurring/data/recurring_rule_repository.dart';
 import '../../recurring/presentation/recurring_rule_list_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
+import '../../wishlist/presentation/wishlist_screen.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/presentation/activity_screen.dart';
 import '../../transactions/presentation/quick_add_screen.dart';
@@ -80,6 +81,14 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  Future<void> _openWishlist() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WishlistScreen(profile: widget.profile),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tabs = [
@@ -87,6 +96,7 @@ class _MainShellState extends State<MainShell> {
         key: ValueKey('home-$_refreshTick'),
         profile: widget.profile,
         onOpenSettings: _openSettings,
+        onOpenWishlist: _openWishlist,
       ),
       ActivityScreen(
         key: ValueKey('activity-$_refreshTick'),
