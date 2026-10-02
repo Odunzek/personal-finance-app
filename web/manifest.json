@@ -1,11 +1,11 @@
 {
-    "name": "finance_app",
-    "short_name": "finance_app",
+    "name": "Fin Tracker",
+    "short_name": "Fin Tracker",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#11121C",
+    "theme_color": "#11121C",
+    "description": "Personal and business finance tracker.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
