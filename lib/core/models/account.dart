@@ -14,12 +14,14 @@ enum DebtKind {
   creditCard,
   loan,
   bnpl,
+  shareholderLoan,
   other;
 
   String toDb() => switch (this) {
     DebtKind.creditCard => 'credit_card',
     DebtKind.loan => 'loan',
     DebtKind.bnpl => 'bnpl',
+    DebtKind.shareholderLoan => 'shareholder_loan',
     DebtKind.other => 'other',
   };
 
@@ -27,6 +29,7 @@ enum DebtKind {
     'credit_card' => DebtKind.creditCard,
     'loan' => DebtKind.loan,
     'bnpl' => DebtKind.bnpl,
+    'shareholder_loan' => DebtKind.shareholderLoan,
     _ => DebtKind.other,
   };
 
@@ -34,6 +37,7 @@ enum DebtKind {
     DebtKind.creditCard => 'Credit card',
     DebtKind.loan => 'Loan',
     DebtKind.bnpl => 'Buy now, pay later',
+    DebtKind.shareholderLoan => 'Shareholder loan',
     DebtKind.other => 'Other debt',
   };
 }

@@ -192,6 +192,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
     DebtKind.creditCard => LucideIcons.creditCard,
     DebtKind.loan => LucideIcons.landmark,
     DebtKind.bnpl => LucideIcons.repeat,
+    DebtKind.shareholderLoan => LucideIcons.handshake,
     DebtKind.other => LucideIcons.creditCard,
     null => LucideIcons.creditCard,
   };
