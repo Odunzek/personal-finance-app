@@ -14,6 +14,20 @@ abstract class WishlistRepository {
   Future<void> setDone(int id, bool isDone);
 
   Future<void> deleteItem(int id);
+
+  /// Every part of every item in [itemIds], in one round-trip — the screen
+  /// needs all of them at once to total each item up.
+  Future<List<WishlistPart>> listParts(List<int> itemIds);
+
+  Future<WishlistPart> createPart({
+    required int wishlistItemId,
+    required String name,
+    int? estimatedPriceMinorUnits,
+  });
+
+  Future<void> setPartDone(int id, bool isDone);
+
+  Future<void> deletePart(int id);
 }
 
 class SupabaseWishlistRepository implements WishlistRepository {
@@ -61,5 +75,50 @@ class SupabaseWishlistRepository implements WishlistRepository {
   @override
   Future<void> deleteItem(int id) async {
     await supabase.from('wishlist_items').delete().eq('id', id);
+  }
+
+  @override
+  Future<List<WishlistPart>> listParts(List<int> itemIds) async {
+    if (itemIds.isEmpty) return [];
+    final rows = await supabase
+        .from('wishlist_parts')
+        .select()
+        .inFilter('wishlist_item_id', itemIds)
+        .order('sort_order')
+        .order('created_at');
+    return (rows as List)
+        .map((r) => WishlistPart.fromRow(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<WishlistPart> createPart({
+    required int wishlistItemId,
+    required String name,
+    int? estimatedPriceMinorUnits,
+  }) async {
+    final row = await supabase
+        .from('wishlist_parts')
+        .insert({
+          'wishlist_item_id': wishlistItemId,
+          'name': name,
+          'estimated_price_minor_units': estimatedPriceMinorUnits,
+        })
+        .select()
+        .single();
+    return WishlistPart.fromRow(row);
+  }
+
+  @override
+  Future<void> setPartDone(int id, bool isDone) async {
+    await supabase
+        .from('wishlist_parts')
+        .update({'is_done': isDone})
+        .eq('id', id);
+  }
+
+  @override
+  Future<void> deletePart(int id) async {
+    await supabase.from('wishlist_parts').delete().eq('id', id);
   }
 }

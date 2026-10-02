@@ -10,6 +10,12 @@ class AppColors {
 
   static const warning = Color(0xFFC98A16);
 
+  /// Transfers have no category color of their own. Using the theme's
+  /// "muted" role painted a near-black disc in light mode; this slate is
+  /// picked to read as a deliberate neutral badge on both backgrounds, with
+  /// enough contrast for the white glyph on top.
+  static const transferSlate = Color(0xFF7E8C9A);
+
   static const light = AppPalette(
     accent: Color(0xFF5CA2AC),
     onAccent: Color(0xFF04201F),

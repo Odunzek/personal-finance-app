@@ -34,12 +34,16 @@ class WishlistScreen extends StatefulWidget {
 class _WishlistData {
   final List<WishlistItem> items;
   final List<Category> categories;
+  final Map<int, List<WishlistPart>> partsByItemId;
 
-  const _WishlistData(this.items, this.categories);
+  const _WishlistData(this.items, this.categories, this.partsByItemId);
+
+  List<WishlistPart> partsOf(int itemId) => partsByItemId[itemId] ?? const [];
 }
 
 class _WishlistScreenState extends State<WishlistScreen> {
   late Future<_WishlistData> _dataFuture;
+  final Set<int> _expandedIds = {};
 
   @override
   void initState() {
@@ -58,10 +62,57 @@ class _WishlistScreenState extends State<WishlistScreen> {
       widget.wishlistRepository.listItems(widget.profile.id),
       widget.categoryRepository.listActiveCategories(widget.profile.id),
     ]);
-    return _WishlistData(
-      results[0] as List<WishlistItem>,
-      results[1] as List<Category>,
+    final items = results[0] as List<WishlistItem>;
+    final parts = await widget.wishlistRepository.listParts(
+      items.map((i) => i.id).toList(),
     );
+    final byItem = <int, List<WishlistPart>>{};
+    for (final p in parts) {
+      byItem.putIfAbsent(p.wishlistItemId, () => []).add(p);
+    }
+    return _WishlistData(items, results[1] as List<Category>, byItem);
+  }
+
+  Future<void> _addPart(WishlistItem item) async {
+    final result = await showWishlistPartFormSheet(
+      context,
+      itemName: item.name,
+    );
+    if (result == null) return;
+    try {
+      await widget.wishlistRepository.createPart(
+        wishlistItemId: item.id,
+        name: result.name,
+        estimatedPriceMinorUnits: result.estimatedPriceMinorUnits,
+      );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Adding');
+      return;
+    }
+    if (mounted) {
+      setState(() => _expandedIds.add(item.id));
+      _reload();
+    }
+  }
+
+  Future<void> _togglePart(WishlistPart part) async {
+    try {
+      await widget.wishlistRepository.setPartDone(part.id, !part.isDone);
+    } catch (_) {
+      if (mounted) showActionError(context, 'Updating');
+      return;
+    }
+    if (mounted) _reload();
+  }
+
+  Future<void> _deletePart(WishlistPart part) async {
+    try {
+      await widget.wishlistRepository.deletePart(part.id);
+    } catch (_) {
+      if (mounted) showActionError(context, 'Removing');
+      return;
+    }
+    if (mounted) _reload();
   }
 
   Future<void> _addItem(_WishlistData data) async {
@@ -142,11 +193,19 @@ class _WishlistScreenState extends State<WishlistScreen> {
             }
             final categoriesById = {for (final c in data.categories) c.id: c};
             final pending = data.items.where((i) => !i.isDone).length;
+            // What's still outstanding: for an item broken into parts, only
+            // the parts not yet bought, so the number drops as a build is
+            // assembled piece by piece.
             final estimatedTotal = data.items
                 .where((i) => !i.isDone)
                 .fold<int>(
                   0,
-                  (sum, i) => sum + (i.estimatedPriceMinorUnits ?? 0),
+                  (sum, i) =>
+                      sum +
+                      WishlistTotals.of(
+                        i,
+                        data.partsOf(i.id),
+                      ).remainingMinorUnits,
                 );
             return ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -166,94 +225,21 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   );
                 }
                 final item = data.items[index - 1];
-                final category = categoriesById[item.categoryId];
-                return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Card(
-                        margin: EdgeInsets.zero,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () => _toggleDone(item),
-                          onLongPress: () => _confirmDelete(item),
-                          child: Opacity(
-                            opacity: item.isDone ? 0.5 : 1,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              child: Row(
-                                children: [
-                                  _Checkbox(checked: item.isDone),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.name,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w600,
-                                                decoration: item.isDone
-                                                    ? TextDecoration.lineThrough
-                                                    : null,
-                                              ),
-                                        ),
-                                        if (category != null) ...[
-                                          const SizedBox(height: 3),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                iconForKey(category.iconKey),
-                                                size: 12,
-                                                color: Color(
-                                                  category.colorArgb,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                category.name,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall,
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  if (item.estimatedPriceMinorUnits != null)
-                                    MoneyText(
-                                      item.estimatedPriceMinorUnits!,
-                                      fontSize: 14,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                    ),
-                                  IconButton(
-                                    onPressed: () => _confirmDelete(item),
-                                    icon: const Icon(
-                                      LucideIcons.trash2,
-                                      size: 17,
-                                    ),
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                    visualDensity: VisualDensity.compact,
-                                    tooltip: 'Remove',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                return _WishlistTile(
+                      item: item,
+                      category: categoriesById[item.categoryId],
+                      parts: data.partsOf(item.id),
+                      expanded: _expandedIds.contains(item.id),
+                      onToggleExpanded: () => setState(() {
+                        if (!_expandedIds.remove(item.id)) {
+                          _expandedIds.add(item.id);
+                        }
+                      }),
+                      onToggleDone: () => _toggleDone(item),
+                      onDelete: () => _confirmDelete(item),
+                      onAddPart: () => _addPart(item),
+                      onTogglePart: _togglePart,
+                      onDeletePart: _deletePart,
                     )
                     .animate()
                     .fadeIn(delay: (index * 30).ms, duration: 200.ms)
@@ -277,17 +263,261 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 }
 
+/// One wishlist row. An item with parts shows its rolled-up total and how far
+/// along it is, and expands to let each piece be priced and ticked off.
+class _WishlistTile extends StatelessWidget {
+  final WishlistItem item;
+  final Category? category;
+  final List<WishlistPart> parts;
+  final bool expanded;
+  final VoidCallback onToggleExpanded;
+  final VoidCallback onToggleDone;
+  final VoidCallback onDelete;
+  final VoidCallback onAddPart;
+  final ValueChanged<WishlistPart> onTogglePart;
+  final ValueChanged<WishlistPart> onDeletePart;
+
+  const _WishlistTile({
+    required this.item,
+    required this.category,
+    required this.parts,
+    required this.expanded,
+    required this.onToggleExpanded,
+    required this.onToggleDone,
+    required this.onDelete,
+    required this.onAddPart,
+    required this.onTogglePart,
+    required this.onDeletePart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final totals = WishlistTotals.of(item, parts);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Column(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.vertical(
+                top: const Radius.circular(16),
+                bottom: Radius.circular(expanded ? 0 : 16),
+              ),
+              onTap: totals.hasParts ? onToggleExpanded : onToggleDone,
+              onLongPress: onDelete,
+              child: Opacity(
+                opacity: item.isDone ? 0.5 : 1,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: onToggleDone,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: _Checkbox(checked: item.isDone),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.name,
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    decoration: item.isDone
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                            ),
+                            if (category != null || totals.hasParts) ...[
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  if (category != null) ...[
+                                    Icon(
+                                      iconForKey(category!.iconKey),
+                                      size: 12,
+                                      color: Color(category!.colorArgb),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      category!.name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
+                                  ],
+                                  if (category != null && totals.hasParts)
+                                    Text(
+                                      '  ·  ',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
+                                  if (totals.hasParts)
+                                    Text(
+                                      '${totals.acquiredPartCount} of '
+                                      '${totals.partCount} parts',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: scheme.primary),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      if (totals.totalMinorUnits > 0)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            MoneyText(
+                              totals.totalMinorUnits,
+                              fontSize: 14,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                            if (totals.hasParts &&
+                                totals.acquiredMinorUnits > 0)
+                              Text(
+                                '${formatMoney(totals.remainingMinorUnits)} '
+                                'left',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: scheme.primary),
+                              ),
+                          ],
+                        ),
+                      if (totals.hasParts)
+                        Icon(
+                          expanded
+                              ? LucideIcons.chevronUp
+                              : LucideIcons.chevronDown,
+                          size: 18,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      IconButton(
+                        onPressed: onDelete,
+                        icon: const Icon(LucideIcons.trash2, size: 17),
+                        color: scheme.onSurfaceVariant,
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Remove',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (expanded)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 10, 8),
+                child: Column(
+                  children: [
+                    Divider(color: scheme.outlineVariant, height: 1),
+                    for (final part in parts)
+                      _PartRow(
+                        part: part,
+                        onToggle: () => onTogglePart(part),
+                        onDelete: () => onDeletePart(part),
+                      ),
+                  ],
+                ),
+              ),
+            if (expanded || !totals.hasParts)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: onAddPart,
+                    icon: const Icon(LucideIcons.plus, size: 15),
+                    label: Text(
+                      totals.hasParts ? 'Add another part' : 'Break into parts',
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PartRow extends StatelessWidget {
+  final WishlistPart part;
+  final VoidCallback onToggle;
+  final VoidCallback onDelete;
+
+  const _PartRow({
+    required this.part,
+    required this.onToggle,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(10),
+      child: Opacity(
+        opacity: part.isDone ? 0.5 : 1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            children: [
+              _Checkbox(checked: part.isDone, size: 18),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  part.name,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    decoration: part.isDone ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+              if (part.estimatedPriceMinorUnits != null)
+                MoneyText(
+                  part.estimatedPriceMinorUnits!,
+                  fontSize: 13,
+                  color: scheme.onSurfaceVariant,
+                ),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(LucideIcons.x, size: 15),
+                color: scheme.onSurfaceVariant,
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Remove part',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Checkbox extends StatelessWidget {
   final bool checked;
+  final double size;
 
-  const _Checkbox({required this.checked});
+  const _Checkbox({required this.checked, this.size = 22});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      width: 22,
-      height: 22,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: checked ? scheme.primary : Colors.transparent,
@@ -297,7 +527,7 @@ class _Checkbox extends StatelessWidget {
         ),
       ),
       child: checked
-          ? Icon(LucideIcons.check, size: 14, color: scheme.onPrimary)
+          ? Icon(LucideIcons.check, size: size * 0.64, color: scheme.onPrimary)
           : null,
     );
   }

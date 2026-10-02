@@ -10,6 +10,7 @@ import 'core/security/lock_screen.dart';
 import 'core/supabase/supabase_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'core/widgets/splash_screen.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/sign_in_screen.dart';
 import 'features/profiles/presentation/profile_list_screen.dart';
@@ -25,15 +26,22 @@ Future<void> main() async {
   runApp(const FinanceApp());
 }
 
-class FinanceApp extends StatelessWidget {
+class FinanceApp extends StatefulWidget {
   const FinanceApp({super.key});
+
+  @override
+  State<FinanceApp> createState() => _FinanceAppState();
+}
+
+class _FinanceAppState extends State<FinanceApp> {
+  bool _showSplash = true;
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeModeNotifier,
       builder: (context, mode, _) => MaterialApp(
-        title: 'Kinscope',
+        title: 'Fin Tracker',
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: mode,
@@ -42,11 +50,24 @@ class FinanceApp extends StatelessWidget {
         // rather than as an initial route — the app's own navigation (e.g.
         // profile selection replaces the whole back stack) would otherwise
         // tear down a route-based lock gate and leave nothing listening.
+        // The splash sits above both so a cold start never flashes the lock
+        // screen before the wordmark.
         builder: (context, child) {
           return ValueListenableBuilder<bool>(
             valueListenable: AppLockController.instance.isLocked,
             builder: (context, locked, _) {
-              return Stack(children: [?child, if (locked) const LockScreen()]);
+              return Stack(
+                children: [
+                  ?child,
+                  if (locked) const LockScreen(),
+                  if (_showSplash)
+                    SplashScreen(
+                      onDone: () {
+                        if (mounted) setState(() => _showSplash = false);
+                      },
+                    ),
+                ],
+              );
             },
           );
         },

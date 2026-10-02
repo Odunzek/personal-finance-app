@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../categories/presentation/category_style_options.dart';
@@ -68,7 +69,7 @@ class TransactionTile extends StatelessWidget {
         leading: _leading(
           context,
           icon: LucideIcons.arrowRightLeft,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          color: AppColors.transferSlate,
         ),
         title: Text(
           transaction.note?.isNotEmpty == true ? transaction.note! : 'Transfer',

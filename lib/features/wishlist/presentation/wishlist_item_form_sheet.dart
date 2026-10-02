@@ -28,6 +28,113 @@ Future<WishlistItemFormResult?> showWishlistItemFormSheet(
   );
 }
 
+class WishlistPartFormResult {
+  final String name;
+  final int? estimatedPriceMinorUnits;
+
+  const WishlistPartFormResult({
+    required this.name,
+    required this.estimatedPriceMinorUnits,
+  });
+}
+
+/// Adds one piece to an existing wishlist item (a drive for the home server).
+/// No category here — a part inherits whatever its parent item is tagged as.
+Future<WishlistPartFormResult?> showWishlistPartFormSheet(
+  BuildContext context, {
+  required String itemName,
+}) {
+  return showModalBottomSheet<WishlistPartFormResult>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => _WishlistPartFormSheet(itemName: itemName),
+  );
+}
+
+class _WishlistPartFormSheet extends StatefulWidget {
+  final String itemName;
+
+  const _WishlistPartFormSheet({required this.itemName});
+
+  @override
+  State<_WishlistPartFormSheet> createState() => _WishlistPartFormSheetState();
+}
+
+class _WishlistPartFormSheetState extends State<_WishlistPartFormSheet> {
+  final _nameController = TextEditingController();
+  final _priceController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+    Navigator.of(context).pop(
+      WishlistPartFormResult(
+        name: name,
+        estimatedPriceMinorUnits: parseMoneyMinorUnits(_priceController.text),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Add a part',
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Part of "${widget.itemName}"',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'What is it?'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _priceController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Estimated price (optional)',
+                prefixText: '\$',
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(onPressed: _submit, child: const Text('Add part')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _WishlistItemFormSheet extends StatefulWidget {
   final List<Category> categories;
 

@@ -9,6 +9,7 @@ import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/notifications/budget_alert_service.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/category_badge.dart';
 import '../../../core/widgets/money_text.dart';
@@ -262,7 +263,7 @@ class _TransactionDetailPaneState extends State<TransactionDetailPane> {
                     ? LucideIcons.arrowRightLeft
                     : iconForKey(_category?.iconKey ?? 'other'),
                 color: isTransfer
-                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    ? AppColors.transferSlate
                     : (_category != null ? Color(_category!.colorArgb) : null),
                 size: 56,
                 iconSize: 26,
