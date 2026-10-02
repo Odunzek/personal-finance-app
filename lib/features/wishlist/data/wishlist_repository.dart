@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
+
 import '../../../core/models/wishlist_item.dart';
 import '../../../core/supabase/supabase_client.dart';
 
@@ -80,15 +82,25 @@ class SupabaseWishlistRepository implements WishlistRepository {
   @override
   Future<List<WishlistPart>> listParts(List<int> itemIds) async {
     if (itemIds.isEmpty) return [];
-    final rows = await supabase
-        .from('wishlist_parts')
-        .select()
-        .inFilter('wishlist_item_id', itemIds)
-        .order('sort_order')
-        .order('created_at');
-    return (rows as List)
-        .map((r) => WishlistPart.fromRow(r as Map<String, dynamic>))
-        .toList();
+    try {
+      final rows = await supabase
+          .from('wishlist_parts')
+          .select()
+          .inFilter('wishlist_item_id', itemIds)
+          .order('sort_order')
+          .order('created_at');
+      return (rows as List)
+          .map((r) => WishlistPart.fromRow(r as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      // 42P01 = relation does not exist: the app build is ahead of the
+      // database, which happens whenever the APK is installed before its
+      // migration is pushed. Degrade to "no parts" so the wishlist still
+      // works as it did before the feature, instead of the whole screen
+      // failing to load. Any other error is real and propagates.
+      if (e.code != '42P01') rethrow;
+      return [];
+    }
   }
 
   @override
