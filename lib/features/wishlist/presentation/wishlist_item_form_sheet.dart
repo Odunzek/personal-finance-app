@@ -111,13 +111,13 @@ class _WishlistPartFormSheetState extends State<_WishlistPartFormSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              widget.existing == null ? 'Add a part' : 'Edit part',
+              widget.existing == null ? 'Add an item' : 'Edit item',
               style: Theme.of(context).textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             Text(
-              'Part of "${widget.itemName}"',
+              'Under "${widget.itemName}"',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -143,7 +143,7 @@ class _WishlistPartFormSheetState extends State<_WishlistPartFormSheet> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _submit,
-              child: Text(widget.existing == null ? 'Add part' : 'Save'),
+              child: Text(widget.existing == null ? 'Add item' : 'Save'),
             ),
           ],
         ),
@@ -211,7 +211,9 @@ class _WishlistItemFormSheetState extends State<_WishlistItemFormSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              widget.existing == null ? 'Add to wishlist' : 'Edit item',
+              // Not "Edit item": the things listed underneath one of these
+              // are what the UI calls items.
+              widget.existing == null ? 'Add to wishlist' : 'Edit',
               style: Theme.of(context).textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
@@ -232,7 +234,7 @@ class _WishlistItemFormSheetState extends State<_WishlistItemFormSheet> {
               ),
               decoration: const InputDecoration(
                 labelText: 'Total budget (optional)',
-                helperText: 'Parts you add later are measured against this',
+                helperText: 'Anything you list under it counts against this',
                 prefixText: '\$',
               ),
             ),

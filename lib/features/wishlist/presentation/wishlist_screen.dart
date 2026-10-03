@@ -190,7 +190,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove this item?'),
+        title: const Text('Remove from wishlist?'),
         content: Text('"${item.name}" will be removed from your wishlist.'),
         actions: [
           TextButton(
@@ -412,7 +412,7 @@ class _WishlistTile extends StatelessWidget {
                                   if (totals.hasParts)
                                     Text(
                                       '${totals.acquiredPartCount} of '
-                                      '${totals.partCount} parts',
+                                      '${totals.partCount} items',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
@@ -439,19 +439,15 @@ class _WishlistTile extends StatelessWidget {
                               fontSize: 14,
                               color: scheme.onSurfaceVariant,
                             ),
-                            if (totals.hasParts && totals.hasBudget)
+                            // Only the overrun: when under budget the bar's
+                            // own caption below already says the same thing.
+                            if (totals.isOverBudget)
                               Text(
-                                totals.isOverBudget
-                                    ? '${formatMoney(totals.overByMinorUnits)} over'
-                                    : '${formatMoney(totals.partsTotalMinorUnits)} in parts',
+                                '${formatMoney(totals.overByMinorUnits)} over',
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
-                                      color: totals.isOverBudget
-                                          ? scheme.error
-                                          : scheme.primary,
-                                      fontWeight: totals.isOverBudget
-                                          ? FontWeight.w600
-                                          : null,
+                                      color: scheme.error,
+                                      fontWeight: FontWeight.w600,
                                     ),
                               ),
                           ],
@@ -469,11 +465,24 @@ class _WishlistTile extends StatelessWidget {
                         tooltip: 'More',
                         onSelected: (v) {
                           if (v == 'edit') onEdit();
+                          if (v == 'add') onAddPart();
                           if (v == 'delete') onDelete();
                         },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          PopupMenuItem(value: 'delete', child: Text('Remove')),
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Text('Edit'),
+                          ),
+                          PopupMenuItem(
+                            value: 'add',
+                            child: Text(
+                              totals.hasParts ? 'Add an item' : 'Break it down',
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Remove'),
+                          ),
                         ],
                       ),
                     ],
@@ -500,20 +509,6 @@ class _WishlistTile extends StatelessWidget {
                         onDelete: () => onDeletePart(part),
                       ),
                   ],
-                ),
-              ),
-            if (expanded || !totals.hasParts)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: onAddPart,
-                    icon: const Icon(LucideIcons.plus, size: 15),
-                    label: Text(
-                      totals.hasParts ? 'Add another part' : 'Break into parts',
-                    ),
-                  ),
                 ),
               ),
           ],
@@ -554,7 +549,7 @@ class _BudgetBar extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           over
-              ? '${formatMoney(totals.partsTotalMinorUnits)} of parts against a '
+              ? '${formatMoney(totals.partsTotalMinorUnits)} listed against a '
                     '${formatMoney(totals.budgetMinorUnits)} budget'
               : '${formatMoney(totals.partsTotalMinorUnits)} of '
                     '${formatMoney(totals.budgetMinorUnits)} planned',

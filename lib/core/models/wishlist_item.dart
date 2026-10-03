@@ -30,9 +30,11 @@ class WishlistItem {
   }
 }
 
-/// One piece of a larger wishlist item — the drives and PSU that make up a
-/// home server, say. An item with parts is costed from them rather than from
-/// its own single estimate.
+/// One line listed under a larger wishlist entry — the drives and PSU making
+/// up a home server, or the winter tires and undercoating under "Car
+/// expenses". The UI calls these "items", deliberately general, since what
+/// they are varies; the class and table keep the original "part" name
+/// because renaming a shipped table buys nothing.
 class WishlistPart {
   final int id;
   final int wishlistItemId;
