@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/models/category.dart';
 import '../../../core/models/money.dart';
+import '../../../core/models/wishlist_item.dart';
 
 class WishlistItemFormResult {
   final String name;
@@ -15,16 +16,19 @@ class WishlistItemFormResult {
   });
 }
 
-/// Shows a bottom sheet to add a wishlist item — just a name is required;
-/// the estimated price and category tag are both optional.
+/// Shows a bottom sheet to add a wishlist item, or edit [existing] when one
+/// is given. Just a name is required; the estimated price and category tag
+/// are both optional.
 Future<WishlistItemFormResult?> showWishlistItemFormSheet(
   BuildContext context, {
   required List<Category> categories,
+  WishlistItem? existing,
 }) {
   return showModalBottomSheet<WishlistItemFormResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _WishlistItemFormSheet(categories: categories),
+    builder: (context) =>
+        _WishlistItemFormSheet(categories: categories, existing: existing),
   );
 }
 
@@ -38,31 +42,41 @@ class WishlistPartFormResult {
   });
 }
 
-/// Adds one piece to an existing wishlist item (a drive for the home server).
-/// No category here — a part inherits whatever its parent item is tagged as.
+/// Adds one piece to an existing wishlist item (a drive for the home server),
+/// or edits [existing]. No category here — a part inherits whatever its
+/// parent item is tagged as.
 Future<WishlistPartFormResult?> showWishlistPartFormSheet(
   BuildContext context, {
   required String itemName,
+  WishlistPart? existing,
 }) {
   return showModalBottomSheet<WishlistPartFormResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _WishlistPartFormSheet(itemName: itemName),
+    builder: (context) =>
+        _WishlistPartFormSheet(itemName: itemName, existing: existing),
   );
 }
 
 class _WishlistPartFormSheet extends StatefulWidget {
   final String itemName;
+  final WishlistPart? existing;
 
-  const _WishlistPartFormSheet({required this.itemName});
+  const _WishlistPartFormSheet({required this.itemName, this.existing});
 
   @override
   State<_WishlistPartFormSheet> createState() => _WishlistPartFormSheetState();
 }
 
 class _WishlistPartFormSheetState extends State<_WishlistPartFormSheet> {
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
+  late final _nameController = TextEditingController(
+    text: widget.existing?.name ?? '',
+  );
+  late final _priceController = TextEditingController(
+    text: widget.existing?.estimatedPriceMinorUnits == null
+        ? ''
+        : (widget.existing!.estimatedPriceMinorUnits! / 100).toStringAsFixed(2),
+  );
 
   @override
   void dispose() {
@@ -97,7 +111,7 @@ class _WishlistPartFormSheetState extends State<_WishlistPartFormSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Add a part',
+              widget.existing == null ? 'Add a part' : 'Edit part',
               style: Theme.of(context).textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
@@ -127,7 +141,10 @@ class _WishlistPartFormSheetState extends State<_WishlistPartFormSheet> {
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(onPressed: _submit, child: const Text('Add part')),
+            ElevatedButton(
+              onPressed: _submit,
+              child: Text(widget.existing == null ? 'Add part' : 'Save'),
+            ),
           ],
         ),
       ),
@@ -137,17 +154,28 @@ class _WishlistPartFormSheetState extends State<_WishlistPartFormSheet> {
 
 class _WishlistItemFormSheet extends StatefulWidget {
   final List<Category> categories;
+  final WishlistItem? existing;
 
-  const _WishlistItemFormSheet({required this.categories});
+  const _WishlistItemFormSheet({required this.categories, this.existing});
 
   @override
   State<_WishlistItemFormSheet> createState() => _WishlistItemFormSheetState();
 }
 
 class _WishlistItemFormSheetState extends State<_WishlistItemFormSheet> {
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  Category? _category;
+  late final _nameController = TextEditingController(
+    text: widget.existing?.name ?? '',
+  );
+  late final _priceController = TextEditingController(
+    text: widget.existing?.estimatedPriceMinorUnits == null
+        ? ''
+        : (widget.existing!.estimatedPriceMinorUnits! / 100).toStringAsFixed(2),
+  );
+  late Category? _category = widget.existing?.categoryId == null
+      ? null
+      : widget.categories
+            .where((c) => c.id == widget.existing!.categoryId)
+            .firstOrNull;
 
   @override
   void dispose() {
@@ -183,7 +211,7 @@ class _WishlistItemFormSheetState extends State<_WishlistItemFormSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Add to wishlist',
+              widget.existing == null ? 'Add to wishlist' : 'Edit item',
               style: Theme.of(context).textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
@@ -203,7 +231,8 @@ class _WishlistItemFormSheetState extends State<_WishlistItemFormSheet> {
                 decimal: true,
               ),
               decoration: const InputDecoration(
-                labelText: 'Estimated price (optional)',
+                labelText: 'Total budget (optional)',
+                helperText: 'Parts you add later are measured against this',
                 prefixText: '\$',
               ),
             ),
@@ -233,7 +262,10 @@ class _WishlistItemFormSheetState extends State<_WishlistItemFormSheet> {
               ),
             ],
             const SizedBox(height: 24),
-            ElevatedButton(onPressed: _submit, child: const Text('Add')),
+            ElevatedButton(
+              onPressed: _submit,
+              child: Text(widget.existing == null ? 'Add' : 'Save'),
+            ),
           ],
         ),
       ),

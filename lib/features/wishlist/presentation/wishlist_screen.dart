@@ -95,6 +95,47 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
+  Future<void> _editItem(WishlistItem item, _WishlistData data) async {
+    final result = await showWishlistItemFormSheet(
+      context,
+      categories: data.categories,
+      existing: item,
+    );
+    if (result == null) return;
+    try {
+      await widget.wishlistRepository.updateItem(
+        id: item.id,
+        name: result.name,
+        estimatedPriceMinorUnits: result.estimatedPriceMinorUnits,
+        categoryId: result.categoryId,
+      );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Saving');
+      return;
+    }
+    if (mounted) _reload();
+  }
+
+  Future<void> _editPart(WishlistPart part, WishlistItem item) async {
+    final result = await showWishlistPartFormSheet(
+      context,
+      itemName: item.name,
+      existing: part,
+    );
+    if (result == null) return;
+    try {
+      await widget.wishlistRepository.updatePart(
+        id: part.id,
+        name: result.name,
+        estimatedPriceMinorUnits: result.estimatedPriceMinorUnits,
+      );
+    } catch (_) {
+      if (mounted) showActionError(context, 'Saving');
+      return;
+    }
+    if (mounted) _reload();
+  }
+
   Future<void> _togglePart(WishlistPart part) async {
     try {
       await widget.wishlistRepository.setPartDone(part.id, !part.isDone);
@@ -236,9 +277,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         }
                       }),
                       onToggleDone: () => _toggleDone(item),
+                      onEdit: () => _editItem(item, data),
                       onDelete: () => _confirmDelete(item),
                       onAddPart: () => _addPart(item),
                       onTogglePart: _togglePart,
+                      onEditPart: (part) => _editPart(part, item),
                       onDeletePart: _deletePart,
                     )
                     .animate()
@@ -272,9 +315,11 @@ class _WishlistTile extends StatelessWidget {
   final bool expanded;
   final VoidCallback onToggleExpanded;
   final VoidCallback onToggleDone;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onAddPart;
   final ValueChanged<WishlistPart> onTogglePart;
+  final ValueChanged<WishlistPart> onEditPart;
   final ValueChanged<WishlistPart> onDeletePart;
 
   const _WishlistTile({
@@ -284,9 +329,11 @@ class _WishlistTile extends StatelessWidget {
     required this.expanded,
     required this.onToggleExpanded,
     required this.onToggleDone,
+    required this.onEdit,
     required this.onDelete,
     required this.onAddPart,
     required this.onTogglePart,
+    required this.onEditPart,
     required this.onDeletePart,
   });
 
@@ -377,22 +424,35 @@ class _WishlistTile extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (totals.totalMinorUnits > 0)
+                      if (totals.budgetMinorUnits > 0 ||
+                          totals.partsTotalMinorUnits > 0)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
+                            // The item's own budget stays the headline figure
+                            // once it has parts, so going over it is visible
+                            // rather than silently becoming the new total.
                             MoneyText(
-                              totals.totalMinorUnits,
+                              totals.hasBudget
+                                  ? totals.budgetMinorUnits
+                                  : totals.partsTotalMinorUnits,
                               fontSize: 14,
                               color: scheme.onSurfaceVariant,
                             ),
-                            if (totals.hasParts &&
-                                totals.acquiredMinorUnits > 0)
+                            if (totals.hasParts && totals.hasBudget)
                               Text(
-                                '${formatMoney(totals.remainingMinorUnits)} '
-                                'left',
+                                totals.isOverBudget
+                                    ? '${formatMoney(totals.overByMinorUnits)} over'
+                                    : '${formatMoney(totals.partsTotalMinorUnits)} in parts',
                                 style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: scheme.primary),
+                                    ?.copyWith(
+                                      color: totals.isOverBudget
+                                          ? scheme.error
+                                          : scheme.primary,
+                                      fontWeight: totals.isOverBudget
+                                          ? FontWeight.w600
+                                          : null,
+                                    ),
                               ),
                           ],
                         ),
@@ -404,18 +464,28 @@ class _WishlistTile extends StatelessWidget {
                           size: 18,
                           color: scheme.onSurfaceVariant,
                         ),
-                      IconButton(
-                        onPressed: onDelete,
-                        icon: const Icon(LucideIcons.trash2, size: 17),
-                        color: scheme.onSurfaceVariant,
-                        visualDensity: VisualDensity.compact,
-                        tooltip: 'Remove',
+                      PopupMenuButton<String>(
+                        icon: const Icon(LucideIcons.moreVertical, size: 17),
+                        tooltip: 'More',
+                        onSelected: (v) {
+                          if (v == 'edit') onEdit();
+                          if (v == 'delete') onDelete();
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Edit')),
+                          PopupMenuItem(value: 'delete', child: Text('Remove')),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ),
             ),
+            if (totals.hasParts && totals.hasBudget)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: _BudgetBar(totals: totals),
+              ),
             if (expanded)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 0, 10, 8),
@@ -426,6 +496,7 @@ class _WishlistTile extends StatelessWidget {
                       _PartRow(
                         part: part,
                         onToggle: () => onTogglePart(part),
+                        onEdit: () => onEditPart(part),
                         onDelete: () => onDeletePart(part),
                       ),
                   ],
@@ -452,14 +523,59 @@ class _WishlistTile extends StatelessWidget {
   }
 }
 
+/// How far the parts have eaten into the item's budget. Fills with the
+/// accent up to the budget, then switches wholly to the error colour once
+/// they overrun it — a bar that simply caps at full would hide the overrun,
+/// which is the one thing worth seeing.
+class _BudgetBar extends StatelessWidget {
+  final WishlistTotals totals;
+
+  const _BudgetBar({required this.totals});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final ratio = totals.partsTotalMinorUnits / totals.budgetMinorUnits;
+    final over = totals.isOverBudget;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: ratio.clamp(0.0, 1.0),
+            minHeight: 6,
+            backgroundColor: scheme.surfaceContainerHighest,
+            valueColor: AlwaysStoppedAnimation(
+              over ? scheme.error : scheme.primary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          over
+              ? '${formatMoney(totals.partsTotalMinorUnits)} of parts against a '
+                    '${formatMoney(totals.budgetMinorUnits)} budget'
+              : '${formatMoney(totals.partsTotalMinorUnits)} of '
+                    '${formatMoney(totals.budgetMinorUnits)} planned',
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: over ? scheme.error : scheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
 class _PartRow extends StatelessWidget {
   final WishlistPart part;
   final VoidCallback onToggle;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _PartRow({
     required this.part,
     required this.onToggle,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -491,12 +607,18 @@ class _PartRow extends StatelessWidget {
                   fontSize: 13,
                   color: scheme.onSurfaceVariant,
                 ),
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(LucideIcons.x, size: 15),
-                color: scheme.onSurfaceVariant,
-                visualDensity: VisualDensity.compact,
-                tooltip: 'Remove part',
+              PopupMenuButton<String>(
+                icon: const Icon(LucideIcons.moreVertical, size: 15),
+                tooltip: 'More',
+                padding: EdgeInsets.zero,
+                onSelected: (v) {
+                  if (v == 'edit') onEdit();
+                  if (v == 'delete') onDelete();
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  PopupMenuItem(value: 'delete', child: Text('Remove')),
+                ],
               ),
             ],
           ),

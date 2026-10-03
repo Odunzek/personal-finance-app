@@ -21,11 +21,12 @@ WishlistPart _part(int id, {int? price, bool isDone = false}) => WishlistPart(
 );
 
 void main() {
-  group('WishlistTotals without parts', () {
-    test('falls back to the item\'s own estimate', () {
+  group('without parts', () {
+    test('the planned cost is the item\'s own estimate', () {
       final totals = WishlistTotals.of(_item(price: 50000), []);
       expect(totals.hasParts, isFalse);
-      expect(totals.totalMinorUnits, 50000);
+      expect(totals.budgetMinorUnits, 50000);
+      expect(totals.plannedMinorUnits, 50000);
       expect(totals.remainingMinorUnits, 50000);
     });
 
@@ -35,32 +36,71 @@ void main() {
       expect(totals.remainingMinorUnits, 0);
     });
 
-    test('an item with no price at all totals zero rather than crashing', () {
+    test('an item with no price totals zero rather than crashing', () {
       final totals = WishlistTotals.of(_item(), []);
-      expect(totals.totalMinorUnits, 0);
+      expect(totals.plannedMinorUnits, 0);
       expect(totals.remainingMinorUnits, 0);
+      expect(totals.isOverBudget, isFalse);
     });
   });
 
-  group('WishlistTotals with parts', () {
-    test('the total is the sum of the parts, not the item estimate', () {
-      final totals = WishlistTotals.of(_item(price: 999999), [
+  group('budget vs parts', () {
+    test('the budget survives being broken into parts', () {
+      final totals = WishlistTotals.of(_item(price: 120000), [
         _part(1, price: 30000),
         _part(2, price: 12500),
       ]);
-      expect(totals.hasParts, isTrue);
-      expect(totals.partCount, 2);
-      expect(totals.totalMinorUnits, 42500);
+      expect(totals.budgetMinorUnits, 120000);
+      expect(totals.partsTotalMinorUnits, 42500);
+      expect(totals.isOverBudget, isFalse);
     });
 
+    test('parts under the budget report how far under', () {
+      final totals = WishlistTotals.of(_item(price: 100000), [
+        _part(1, price: 40000),
+      ]);
+      expect(totals.overByMinorUnits, -60000);
+      expect(totals.isOverBudget, isFalse);
+    });
+
+    test('parts over the budget flag it and report the overrun', () {
+      final totals = WishlistTotals.of(_item(price: 100000), [
+        _part(1, price: 80000),
+        _part(2, price: 45000),
+      ]);
+      expect(totals.partsTotalMinorUnits, 125000);
+      expect(totals.isOverBudget, isTrue);
+      expect(totals.overByMinorUnits, 25000);
+    });
+
+    test('exactly on budget is not over', () {
+      final totals = WishlistTotals.of(_item(price: 50000), [
+        _part(1, price: 20000),
+        _part(2, price: 30000),
+      ]);
+      expect(totals.isOverBudget, isFalse);
+      expect(totals.overByMinorUnits, 0);
+    });
+
+    test('parts with no budget to compare against are never over', () {
+      final totals = WishlistTotals.of(_item(), [_part(1, price: 90000)]);
+      expect(totals.hasBudget, isFalse);
+      expect(totals.isOverBudget, isFalse);
+      // With no budget set, the parts themselves are the plan.
+      expect(totals.plannedMinorUnits, 90000);
+    });
+  });
+
+  group('progress', () {
     test('bought parts count toward acquired and reduce what is left', () {
-      final totals = WishlistTotals.of(_item(), [
+      final totals = WishlistTotals.of(_item(price: 60000), [
         _part(1, price: 30000, isDone: true),
         _part(2, price: 12500),
         _part(3, price: 7500),
       ]);
       expect(totals.acquiredPartCount, 1);
       expect(totals.acquiredMinorUnits, 30000);
+      // Remaining follows the parts, which are what will actually be bought.
       expect(totals.remainingMinorUnits, 20000);
     });
 
@@ -71,17 +111,24 @@ void main() {
       ]);
       expect(totals.partCount, 2);
       expect(totals.acquiredPartCount, 2);
-      expect(totals.totalMinorUnits, 10000);
+      expect(totals.partsTotalMinorUnits, 10000);
       expect(totals.acquiredMinorUnits, 10000);
     });
 
     test('every part bought leaves nothing remaining', () {
-      final totals = WishlistTotals.of(_item(), [
+      final totals = WishlistTotals.of(_item(price: 10000), [
         _part(1, price: 5000, isDone: true),
         _part(2, price: 2500, isDone: true),
       ]);
       expect(totals.remainingMinorUnits, 0);
       expect(totals.acquiredPartCount, totals.partCount);
+    });
+
+    test('an item ticked off outright has nothing remaining, parts or not', () {
+      final totals = WishlistTotals.of(_item(price: 10000, isDone: true), [
+        _part(1, price: 5000),
+      ]);
+      expect(totals.remainingMinorUnits, 0);
     });
   });
 }

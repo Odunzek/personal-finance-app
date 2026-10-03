@@ -15,6 +15,16 @@ abstract class WishlistRepository {
 
   Future<void> setDone(int id, bool isDone);
 
+  /// A null [estimatedPriceMinorUnits] or [categoryId] clears that field,
+  /// rather than meaning "leave as-is" — the edit sheet always submits the
+  /// full intended state, and both are legitimately clearable.
+  Future<void> updateItem({
+    required int id,
+    required String name,
+    required int? estimatedPriceMinorUnits,
+    required int? categoryId,
+  });
+
   Future<void> deleteItem(int id);
 
   /// Every part of every item in [itemIds], in one round-trip — the screen
@@ -28,6 +38,12 @@ abstract class WishlistRepository {
   });
 
   Future<void> setPartDone(int id, bool isDone);
+
+  Future<void> updatePart({
+    required int id,
+    required String name,
+    required int? estimatedPriceMinorUnits,
+  });
 
   Future<void> deletePart(int id);
 }
@@ -71,6 +87,23 @@ class SupabaseWishlistRepository implements WishlistRepository {
     await supabase
         .from('wishlist_items')
         .update({'is_done': isDone})
+        .eq('id', id);
+  }
+
+  @override
+  Future<void> updateItem({
+    required int id,
+    required String name,
+    required int? estimatedPriceMinorUnits,
+    required int? categoryId,
+  }) async {
+    await supabase
+        .from('wishlist_items')
+        .update({
+          'name': name,
+          'estimated_price_minor_units': estimatedPriceMinorUnits,
+          'category_id': categoryId,
+        })
         .eq('id', id);
   }
 
@@ -126,6 +159,21 @@ class SupabaseWishlistRepository implements WishlistRepository {
     await supabase
         .from('wishlist_parts')
         .update({'is_done': isDone})
+        .eq('id', id);
+  }
+
+  @override
+  Future<void> updatePart({
+    required int id,
+    required String name,
+    required int? estimatedPriceMinorUnits,
+  }) async {
+    await supabase
+        .from('wishlist_parts')
+        .update({
+          'name': name,
+          'estimated_price_minor_units': estimatedPriceMinorUnits,
+        })
         .eq('id', id);
   }
 
