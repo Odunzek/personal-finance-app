@@ -202,42 +202,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _printing = true);
     try {
       final results = await Future.wait([
-        widget.transactionRepository.listTransactions(
-          widget.profile.id,
-          from: options.from,
-          // The repository's `to` is exclusive; the picker's To is a date at
-          // midnight, so pass the following calendar day or every
-          // transaction on the chosen final day falls out of the statement.
-          to: DateTime(options.to.year, options.to.month, options.to.day + 1),
-        ),
+        // Unwindowed on purpose: each section's opening balance is the
+        // account's position at `from`, which is derived from everything
+        // that happened before it.
+        widget.transactionRepository.listTransactions(widget.profile.id),
         // All, not just active: the statement's history must resolve names
         // for categories and accounts archived since.
         widget.categoryRepository.listAllCategories(widget.profile.id),
         widget.accountRepository.listAllAccounts(widget.profile.id),
       ]);
-      final allInRange = results[0] as List<model.Transaction>;
+      final allTransactions = results[0] as List<model.Transaction>;
       final categories = results[1] as List<Category>;
       final allAccounts = results[2] as List<Account>;
-      // Filtering by accountId alone only matches the "from" side of a
-      // transfer, so a statement for e.g. Visa would miss money transferred
-      // into it from Cash. Match either side, same as computeAccountBalance.
-      final accountId = options.account?.id;
-      final transactions = accountId == null
-          ? allInRange
-          : allInRange
-                .where(
-                  (t) =>
-                      t.accountId == accountId ||
-                      t.transferAccountId == accountId,
-                )
-                .toList();
 
       final doc = await buildStatementPdf(
         profile: widget.profile,
-        account: options.account,
+        accounts: options.account == null ? accounts : [options.account!],
         from: options.from,
-        to: options.to,
-        transactions: transactions,
+        // The picker's To is a date at midnight and the statement's `to` is
+        // exclusive, so pass the following calendar day or everything on the
+        // chosen final day falls outside the period.
+        to: DateTime(options.to.year, options.to.month, options.to.day + 1),
+        allTransactions: allTransactions,
         categoriesById: {for (final c in categories) c.id: c},
         accountsById: {for (final a in allAccounts) a.id: a},
       );
