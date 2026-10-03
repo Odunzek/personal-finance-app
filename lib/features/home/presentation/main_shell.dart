@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/onboarding/tutorial.dart';
 import '../../../core/recurring/recurring_rule_runner.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../auth/data/auth_repository.dart';
@@ -46,6 +47,16 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _catchUpRecurringRules();
+    _maybeShowTutorial();
+  }
+
+  Future<void> _maybeShowTutorial() async {
+    if (await TutorialStore.hasSeen()) return;
+    if (!mounted) return;
+    // Marked seen before showing, not after: dismissing it any way at all
+    // (back gesture included) still counts as having seen it.
+    await TutorialStore.markSeen();
+    if (mounted) await showTutorial(context);
   }
 
   Future<void> _catchUpRecurringRules() async {

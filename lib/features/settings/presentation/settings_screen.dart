@@ -12,6 +12,7 @@ import '../../../core/export/transactions_csv.dart';
 import '../../../core/models/account.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
+import '../../../core/onboarding/tutorial.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/notifications/reminder_service.dart';
 import '../../../core/security/pin_setup_screen.dart';
@@ -417,11 +418,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const Divider(height: 1),
               ListTile(
+                leading: const Icon(LucideIcons.graduationCap),
+                title: const Text('How it works'),
+                subtitle: const Text('A short tour of the app'),
+                onTap: () => showTutorial(context),
+              ),
+              ListTile(
                 leading: const Icon(LucideIcons.info),
                 title: const Text('About'),
                 onTap: () => showAboutDialog(
                   context: context,
-                  applicationName: 'Kinscope',
+                  applicationName: 'Fin Tracker',
                   applicationVersion: '1.0.0',
                 ),
               ),

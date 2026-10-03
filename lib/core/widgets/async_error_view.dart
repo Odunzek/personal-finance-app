@@ -56,11 +56,16 @@ class AsyncErrorView extends StatelessWidget {
 
 /// Shows a failure snackbar for a user-initiated action (save, delete,
 /// export) that threw — call from a catch block, after a mounted check.
+///
+/// Deliberately doesn't blame the connection: a write can also be refused by
+/// the database, and saying "check your connection" for that sends people
+/// looking in the wrong place. It does say the thing did not save, which is
+/// the part that matters.
 void showActionError(BuildContext context, String what) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       behavior: SnackBarBehavior.floating,
-      content: Text('$what failed. Check your connection and try again.'),
+      content: Text('$what didn\'t go through — nothing was saved.'),
     ),
   );
 }
