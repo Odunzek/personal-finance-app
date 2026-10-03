@@ -12,6 +12,7 @@ import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/orbit_watermark.dart';
 import '../../accounts/data/account_repository.dart';
+import '../../accounts/presentation/account_detail_screen.dart';
 import '../../categories/data/category_repository.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/presentation/transaction_detail_screen.dart';
@@ -83,6 +84,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _reload() async {
     setState(_load);
     await _dataFuture;
+  }
+
+  Future<void> _openAccount(Account account) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => AccountDetailScreen(account: account)),
+    );
+    if (changed != true || !mounted) return;
+    await _reload();
+    // Editing a transaction in there also moves Activity, Budgets and Trends.
+    widget.onDataChanged?.call();
   }
 
   @override
@@ -206,33 +217,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 final account = data.accounts[i];
                 final balance = computeAccountBalance(account, data.all);
                 final isLiability = account.type == AccountType.liability;
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        account.name,
-                        style: Theme.of(context).textTheme.bodySmall,
+                return Material(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(14),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => _openAccount(account),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
                       ),
-                      MoneyText(
-                        isLiability ? -balance : balance,
-                        fontSize: 15,
-                        color: isLiability
-                            ? Theme.of(context).colorScheme.error
-                            : null,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            account.name,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          MoneyText(
+                            isLiability ? -balance : balance,
+                            fontSize: 15,
+                            color: isLiability
+                                ? Theme.of(context).colorScheme.error
+                                : null,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 );
               },
