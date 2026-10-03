@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/account.dart';
+import '../../../core/models/account_balance.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/theme/app_colors.dart';
@@ -23,6 +24,11 @@ class TransactionTile extends StatelessWidget {
   /// different from "selecting, but this row isn't picked".
   final bool? selected;
 
+  /// Set inside a single account's history, where a transfer is money
+  /// leaving or arriving rather than a neutral move between two places — so
+  /// it gets a signed amount like everything else in that list.
+  final int? focalAccountId;
+
   /// Off inside screens already scoped to one category (category insights),
   /// where repeating the category name in every subtitle is pure noise.
   final bool showCategoryName;
@@ -37,6 +43,7 @@ class TransactionTile extends StatelessWidget {
     this.showDate = true,
     this.showCategoryName = true,
     this.selected,
+    this.focalAccountId,
   });
 
   Widget _leading(
@@ -84,7 +91,13 @@ class TransactionTile extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: MoneyText(transaction.amountMinorUnits),
+        trailing: focalAccountId == null
+            ? MoneyText(transaction.amountMinorUnits)
+            : MoneyText(
+                signedAmountForAccount(transaction, focalAccountId!),
+                showSign: true,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
       );
     }
 

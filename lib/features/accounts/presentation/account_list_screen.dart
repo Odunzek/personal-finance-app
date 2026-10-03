@@ -12,6 +12,7 @@ import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/mural_background.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../data/account_repository.dart';
+import 'account_detail_screen.dart';
 import 'account_form_sheet.dart';
 
 class AccountListScreen extends StatefulWidget {
@@ -76,6 +77,14 @@ class _AccountListScreenState extends State<AccountListScreen> {
       startingBalanceMinorUnits: result.startingBalanceMinorUnits,
     );
     _reload();
+  }
+
+  Future<void> _openAccount(Account account) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => AccountDetailScreen(account: account)),
+    );
+    // An edit or delete made in there moves this account's balance.
+    if (changed == true) _reload();
   }
 
   Future<void> _deactivateAccount(Account account) async {
@@ -177,6 +186,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                 ? Theme.of(context).colorScheme.error
                                 : null,
                           ),
+                          onTap: () => _openAccount(account),
                           onLongPress: () => _deactivateAccount(account),
                         ),
                       ),
