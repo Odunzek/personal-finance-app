@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../models/money.dart';
+import '../security/privacy_mode.dart';
 
 /// Renders a money amount in Bricolage Grotesque — the numeric display font
 /// used for every figure in the product (see DESIGN.md). Centralizing this
@@ -46,16 +47,23 @@ class MoneyText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      formatMoney(minorUnits, showSign: showSign),
-      textAlign: textAlign,
-      overflow: overflow,
-      maxLines: maxLines,
-      style: style(
-        context,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        color: color,
+    return ValueListenableBuilder<bool>(
+      valueListenable: privacyModeNotifier,
+      builder: (context, hidden, _) => Text(
+        hidden ? PrivacyMode.mask : formatMoney(minorUnits, showSign: showSign),
+        textAlign: textAlign,
+        overflow: overflow,
+        maxLines: maxLines,
+        style: style(
+          context,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          // A masked amount keeps no colour: red or green would still say
+          // whether it was money in or out.
+          color: hidden
+              ? Theme.of(context).colorScheme.onSurfaceVariant
+              : color,
+        ),
       ),
     );
   }
@@ -79,19 +87,37 @@ class AnimatedMoneyText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: minorUnits.toDouble()),
-      duration: const Duration(milliseconds: 700),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, _) => Text(
-        formatMoney(value.round()),
-        style: MoneyText.style(
-          context,
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: color,
-        ),
-      ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: privacyModeNotifier,
+      builder: (context, hidden, _) {
+        if (hidden) {
+          // No count-up animation while masked: the number it lands on is
+          // exactly what's being hidden.
+          return Text(
+            PrivacyMode.mask,
+            style: MoneyText.style(
+              context,
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          );
+        }
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: minorUnits.toDouble()),
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, _) => Text(
+            formatMoney(value.round()),
+            style: MoneyText.style(
+              context,
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              color: color,
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -8,6 +8,7 @@ import '../../../core/models/account_balance.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
+import '../../../core/security/privacy_mode.dart';
 import '../../../core/widgets/async_error_view.dart';
 import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/orbit_watermark.dart';
@@ -159,6 +160,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   letterSpacing: 1.6,
                   fontWeight: FontWeight.w600,
                 ),
+              ),
+            ),
+            ValueListenableBuilder<bool>(
+              valueListenable: privacyModeNotifier,
+              builder: (context, hidden, _) => IconButton(
+                onPressed: PrivacyMode.toggle,
+                icon: Icon(
+                  hidden ? LucideIcons.eyeOff : LucideIcons.eye,
+                  size: 20,
+                ),
+                tooltip: hidden ? 'Show amounts' : 'Hide amounts',
+                visualDensity: VisualDensity.compact,
               ),
             ),
             if (widget.onOpenWishlist != null)

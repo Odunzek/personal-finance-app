@@ -7,6 +7,7 @@ import 'core/config/env.dart';
 import 'core/notifications/reminder_service.dart';
 import 'core/security/app_lock_controller.dart';
 import 'core/security/lock_screen.dart';
+import 'core/security/privacy_mode.dart';
 import 'core/supabase/supabase_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
     await initSupabase();
   }
   await AppLockController.instance.init();
+  await PrivacyMode.init();
   await ReminderService.instance.init();
   runApp(const FinanceApp());
 }
