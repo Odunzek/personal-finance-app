@@ -6,6 +6,7 @@ import '../../../core/layout/breakpoints.dart';
 import '../../../core/models/account.dart';
 import '../../../core/models/account_balance.dart';
 import '../../../core/models/category.dart';
+import '../../../core/models/home_summary.dart';
 import '../../../core/models/profile.dart';
 import '../../../core/models/transaction.dart' as model;
 import '../../../core/security/privacy_mode.dart';
@@ -121,10 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final monthStart = DateTime(now.year, now.month, 1);
     final weekAgo = now.subtract(const Duration(days: 7));
 
-    final netWorth = data.accounts.fold<int>(
-      0,
-      (sum, a) => sum + computeAccountBalance(a, data.all),
-    );
+    final summary = HomeSummary.of(data.accounts, data.all, monthStart);
 
     var monthIncome = 0;
     var monthExpense = 0;
@@ -191,30 +189,41 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        Text('Net worth', style: Theme.of(context).textTheme.bodyMedium),
-        AnimatedMoneyText(netWorth, fontSize: 46),
+        Text(
+          'Available to spend',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        AnimatedMoneyText(summary.availableMinorUnits, fontSize: 46),
         const SizedBox(height: 4),
-        Row(
-          children: [
-            Icon(
-              weekNet >= 0 ? LucideIcons.trendingUp : LucideIcons.trendingDown,
-              size: 14,
-              color: weekNet >= 0
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(width: 4),
-            MoneyText(
-              weekNet,
-              showSign: true,
-              fontSize: 14,
-              color: weekNet >= 0
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.error,
-            ),
-            Text(' this week', style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
+        if (summary.hasDebt)
+          _DebtLine(
+            owed: summary.owedMinorUnits,
+            paidThisMonth: summary.debtPaidThisMonthMinorUnits,
+          ).animate().fadeIn(delay: 150.ms, duration: 300.ms)
+        else
+          Row(
+            children: [
+              Icon(
+                weekNet >= 0
+                    ? LucideIcons.trendingUp
+                    : LucideIcons.trendingDown,
+                size: 14,
+                color: weekNet >= 0
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(width: 4),
+              MoneyText(
+                weekNet,
+                showSign: true,
+                fontSize: 14,
+                color: weekNet >= 0
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.error,
+              ),
+              Text(' this week', style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ).animate().fadeIn(delay: 150.ms, duration: 300.ms),
       ],
     );
 
@@ -489,6 +498,52 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// The line under the headline when there's debt: what's owed, and which way
+/// it moved this month. Kept small deliberately — it's context for the
+/// spendable figure above it, not a second headline.
+class _DebtLine extends StatelessWidget {
+  final int owed;
+
+  /// Positive when debt shrank this month, negative when it grew.
+  final int paidThisMonth;
+
+  const _DebtLine({required this.owed, required this.paidThisMonth});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final small = Theme.of(context).textTheme.bodySmall;
+    final grew = paidThisMonth < 0;
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 6,
+      children: [
+        Icon(LucideIcons.creditCard, size: 13, color: scheme.onSurfaceVariant),
+        MoneyText(
+          owed,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: scheme.onSurfaceVariant,
+        ),
+        Text('owed', style: small),
+        if (paidThisMonth != 0) ...[
+          Text('·', style: small?.copyWith(color: scheme.outline)),
+          MoneyText(
+            paidThisMonth.abs(),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: grew ? scheme.error : scheme.primary,
+          ),
+          Text(
+            grew ? 'added this month' : 'paid off this month',
+            style: small?.copyWith(color: grew ? scheme.error : scheme.primary),
+          ),
+        ],
+      ],
     );
   }
 }
